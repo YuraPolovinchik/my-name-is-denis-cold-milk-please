@@ -1254,6 +1254,29 @@ func _run_optional_tests() -> void:
     assert(crouch_camera.position.y < standing_camera_y - 0.2, "Crouch does not lower the player view")
     player.call("_update_movement", 0.25)
     print("CROUCH_CONTROL_TEST_OK key=C")
+    var powder_test_jar := builder._objects.get("coffee") as RigidBody3D
+    var powder_test_emitter := powder_test_jar.get_node("CoffeePowderEmitter") as CoffeePowderEmitter
+    assert(powder_test_emitter.get_flow_rate(80.0) <= 3.21, "Coffee powder flow is too fast to control")
+    assert(float(player.call("_pour_roll_degrees", &"coffee_jar", 80.0)) > 80.0, "Coffee jar tilts away from the mug")
+    var powder_test_mug := builder._objects.get("mug") as RigidBody3D
+    var powder_test_receiver := powder_test_mug.get_node("MugOpening/OpeningReceiverArea") as LiquidReceiver
+    var powder_probe := PourController.new()
+    add_child(powder_probe)
+    powder_probe.powder_mode = true
+    var forgiving_powder_path := PackedVector3Array([
+        powder_test_receiver.to_global(Vector3(0.11, 0.20, 0.0)),
+        powder_test_receiver.to_global(Vector3(0.11, -0.20, 0.0)),
+    ])
+    var missed_powder_path := PackedVector3Array([
+        powder_test_receiver.to_global(Vector3(0.14, 0.20, 0.0)),
+        powder_test_receiver.to_global(Vector3(0.14, -0.20, 0.0)),
+    ])
+    assert(not powder_probe.call("_find_receiver_intersection", forgiving_powder_path).is_empty(), "Visible powder on the mug opening is rejected")
+    assert(powder_probe.call("_find_receiver_intersection", missed_powder_path).is_empty(), "Powder assist accepts a clear miss outside the mug")
+    var powder_assist_source := powder_test_receiver.global_position + Vector3(0.70, 0.18, 0.0)
+    assert(powder_probe.call("_nearest_assist_receiver", powder_assist_source) == powder_test_receiver, "Powder assist cannot reach the first-person pouring pose")
+    powder_probe.queue_free()
+    print("COFFEE_POWDER_AIM_TEST_OK flow=%.1fg/s capture=11cm miss=14cm" % powder_test_emitter.get_flow_rate(80.0))
     var payment_room := builder._objects.get("payment_altar_room") as Node3D
     var payment_door := builder._objects.get("payment_altar_door") as Node
     var payment_altar := builder._objects.get("payment_altar") as Node3D
@@ -1710,8 +1733,10 @@ func _run_optional_tests() -> void:
     (tv as RigidBody3D).freeze = true
     assert(float(fridge.get("mass")) >= 75.0, "Refrigerator has unrealistic weight")
     assert(int((sofa as RigidBody3D).collision_mask) & 2 != 0, "Movable furniture does not collide with other objects")
-    var player_script := player.get_script() as GDScript
-    assert(player_script != null and player_script.source_code.contains("_update_movement(delta)\n    _update_pushing(delta)"), "Heavy-object pushing is not wired into the physics loop")
+    # The later HEAVY_GRAB_TEST validates the complete physics-loop behaviour.
+    # Avoid inspecting GDScript source text here: exported/remapped builds may
+    # legitimately expose an empty source_code even though the method is live.
+    assert(player.has_method("_update_pushing"), "Heavy-object pushing is not wired into the player controller")
     var bed := builder.get_node_or_null("Bed") as Node3D
     var nightstand := builder.get_node_or_null("Nightstand") as Node3D
     var dresser := builder.get_node_or_null("BedroomDresser") as Node3D

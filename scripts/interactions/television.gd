@@ -217,6 +217,11 @@ void fragment() {
 
 func _setup_optional_video() -> void:
     var video_path := WEB_FOOTBALL_VIDEO if OS.has_feature("web") else LOCAL_FOOTBALL_VIDEO
+    # The desktop master is intentionally excluded from GitHub because it is
+    # larger than the per-file limit. Fresh clones can still use the bundled
+    # Web encode instead of silently losing the television video.
+    if not ResourceLoader.exists(video_path) and ResourceLoader.exists(WEB_FOOTBALL_VIDEO):
+        video_path = WEB_FOOTBALL_VIDEO
     if not ResourceLoader.exists(video_path):
         return
     var loaded_stream := load(video_path) as VideoStream

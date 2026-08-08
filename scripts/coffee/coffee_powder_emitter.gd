@@ -5,7 +5,9 @@ signal powder_changed(remaining_g: float, delta_g: float)
 
 @export var capacity_g: float = 80.0
 @export var remaining_g: float = 80.0
-@export var flow_g_s: float = 4.8
+# 3–5 г должны набираться за полторы-две секунды, а не пролетать
+# за один рывок руки. Промах всё ещё тратит кофе.
+@export var flow_g_s: float = 3.2
 
 func is_empty() -> bool:
 	return remaining_g <= 0.001

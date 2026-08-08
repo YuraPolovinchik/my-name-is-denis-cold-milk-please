@@ -960,7 +960,7 @@ func _update_held_item(delta: float) -> void:
         grip_anchor += camera.global_transform.basis.y * cos(tremor_time * 17.3) * 0.004 * tremor_scale
         var live_tilt := pour_controller.tilt_angle if pour_controller != null else 0.0
         var live_kind: Variant = held_item.get("item_id")
-        var pour_roll := 5.0 + live_tilt if live_kind == &"kettle" else -5.0 - live_tilt
+        var pour_roll := _pour_roll_degrees(StringName(live_kind), live_tilt)
         var pour_rot := Vector3(
             deg_to_rad(-14.0 + sin(tremor_time * 11.9) * 0.8 * tremor_scale),
             camera.global_rotation.y + deg_to_rad(20.0),
@@ -1020,6 +1020,13 @@ func _update_held_item(delta: float) -> void:
     held_item.rotation.x = lerp_angle(held_item.rotation.x, rotation_target.x, minf(1.0, delta * 13.0))
     held_item.rotation.y = lerp_angle(held_item.rotation.y, rotation_target.y, minf(1.0, delta * 13.0))
     held_item.rotation.z = lerp_angle(held_item.rotation.z, rotation_target.z, minf(1.0, delta * 13.0))
+
+func _pour_roll_degrees(item_kind: StringName, live_tilt: float) -> float:
+    # Чайник и банка стоят справа от центра экрана. Положительный
+    # крен направляет их носик/горлышко к центру и к кружке.
+    if item_kind == &"kettle" or item_kind == &"coffee_jar":
+        return 5.0 + live_tilt
+    return -5.0 - live_tilt
 
 func _update_interaction_target() -> void:
     if camera == null:

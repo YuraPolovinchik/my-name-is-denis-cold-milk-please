@@ -37,6 +37,10 @@ const ASSIST_DISTANCE: float = 0.30
 const ASSIST_MAX_ANGLE_DEG: float = 20.0
 const ASSIST_ROTATION_CAP_DEG: float = 12.0
 const RIM_FORGIVENESS: float = 0.022
+const POWDER_ASSIST_DISTANCE: float = 0.85
+const POWDER_ASSIST_MAX_ANGLE_DEG: float = 42.0
+const POWDER_ASSIST_ROTATION_CAP_DEG: float = 26.0
+const POWDER_RIM_FORGIVENESS: float = 0.052
 
 
 var tilt_angle: float = 0.0
@@ -280,11 +284,11 @@ func _get_assisted_direction(origin: Vector3, raw_direction: Vector3) -> Vector3
 		return raw_direction
 	var desired := _ballistic_direction_to(origin, receiver.global_position, 1.0)
 	var angle := rad_to_deg(raw_direction.angle_to(desired))
-	var max_angle := 28.0 if powder_mode else ASSIST_MAX_ANGLE_DEG
+	var max_angle := POWDER_ASSIST_MAX_ANGLE_DEG if powder_mode else ASSIST_MAX_ANGLE_DEG
 	if angle > max_angle:
 		return raw_direction
-	var strength := (0.92 if _stabilizing else 0.70) if powder_mode else (0.82 if _stabilizing else 0.54)
-	var rotation_cap := 16.0 if powder_mode else ASSIST_ROTATION_CAP_DEG
+	var strength := (0.96 if _stabilizing else 0.84) if powder_mode else (0.82 if _stabilizing else 0.54)
+	var rotation_cap := POWDER_ASSIST_ROTATION_CAP_DEG if powder_mode else ASSIST_ROTATION_CAP_DEG
 	var applied_angle := minf(angle * strength, rotation_cap)
 	if angle <= 0.01:
 		return raw_direction
@@ -299,7 +303,7 @@ func _ballistic_direction_to(origin: Vector3, target: Vector3, flow_fraction: fl
 
 func _nearest_assist_receiver(origin: Vector3) -> Node3D:
 	var nearest: Node3D = null
-	var nearest_distance := 0.38 if powder_mode else ASSIST_DISTANCE
+	var nearest_distance := POWDER_ASSIST_DISTANCE if powder_mode else ASSIST_DISTANCE
 	for candidate in get_tree().get_nodes_in_group("liquid_receiver"):
 		if not candidate is Node3D:
 			continue
@@ -336,7 +340,7 @@ func _find_receiver_intersection(points: PackedVector3Array) -> Dictionary:
 			var t := clampf(local_from.y / denominator, 0.0, 1.0) if absf(denominator) > 0.0001 else 0.5
 			var local_hit := local_from.lerp(local_to, t)
 			var radial := Vector2(local_hit.x, local_hit.z).length()
-			var rim_forgiveness := 0.035 if powder_mode else RIM_FORGIVENESS
+			var rim_forgiveness := POWDER_RIM_FORGIVENESS if powder_mode else RIM_FORGIVENESS
 			if radial > radius + rim_forgiveness:
 				continue
 			var acceptance := 1.0

@@ -137,6 +137,7 @@ func _on_mug_contents_changed(components: Dictionary) -> void:
 func _update_display(pouring: bool) -> void:
 	if powder_source != null:
 		title_label.text = "КОФЕ"
+		controls_label.text = "УДЕРЖИВАЙ E — СЫПАТЬ    ПКМ — СТАБИЛИЗИРОВАТЬ    ЛКМ — ПОСТАВИТЬ"
 		source_label.text = "Банка"
 		source_bar.max_value = maxf(powder_source.capacity_g, 1.0)
 		source_bar.value = _shown_source_ml
@@ -152,6 +153,7 @@ func _update_display(pouring: bool) -> void:
 		_set_mug_fill_color(_threshold_color(powder_g, 2.0, 5.0, powder_g, capacity))
 		_update_feedback(pouring)
 		return
+	controls_label.text = "УДЕРЖИВАЙ E — НАЛИВАТЬ    ПКМ — СТАБИЛИЗИРОВАТЬ    ЛКМ — ПОСТАВИТЬ"
 	var liquid_id := source_volume.liquid.id if source_volume.liquid != null else _source_liquid_from_item()
 	var is_milk := liquid_id == "milk"
 	var source_capacity := _source_display_capacity()
@@ -191,7 +193,7 @@ func _source_display_capacity() -> float:
 
 func _update_feedback(pouring: bool) -> void:
 	if not pouring or controller == null:
-		feedback_label.text = "E — НАЧАТЬ НАЛИВ"
+		feedback_label.text = "E — НАЧАТЬ СЫПАТЬ" if powder_source != null else "E — НАЧАТЬ НАЛИВ"
 		feedback_label.modulate = BLUE
 		return
 	var state := controller.last_feedback_state
