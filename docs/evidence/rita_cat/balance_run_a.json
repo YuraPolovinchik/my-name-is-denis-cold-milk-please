@@ -1,0 +1,1353 @@
+{
+  "active_story_after_cleanup": "",
+  "average_fps": 191.696722596832,
+  "calm_windows": [
+    103.249427185059,
+    101.964454040527
+  ],
+  "chaos_refusals": 0,
+  "coffee_finished": true,
+  "context_refusals": {
+    "calm": 68,
+    "context_phone_vacuum": 1,
+    "no_eligible_story": 7,
+    "too_early": 1
+  },
+  "deck": [
+    "PHONE_STORY",
+    "VACUUM_STORY"
+  ],
+  "game_duration_seconds": 390.051116000012,
+  "helpful_actions": [
+    {
+      "quest": "truetruetruetruefalsetruetrue",
+      "target": "Teaspoon",
+      "time": 274.731116000008
+    }
+  ],
+  "laptop_blocked": false,
+  "max_frame_ms": 148.0,
+  "milk_delivery": {
+    "at_door": false,
+    "collected": true,
+    "eta": 0.0,
+    "last_price": 165.0,
+    "missed": false,
+    "missed_deliveries": 0,
+    "next_price": 165.0,
+    "on_the_way": false,
+    "order_attempts": 1,
+    "ordered": true,
+    "pickup_time_left": 0.0,
+    "ring_count": 0,
+    "state": 4,
+    "state_name": "МОЛОКО ЗАБРАНО"
+  },
+  "mode": "A",
+  "relationship": {
+    "feed_uses": 0,
+    "feeding_history": 0,
+    "interest": 48.0,
+    "petting_history": 0,
+    "play_history": 0,
+    "trust": 28.0,
+    "wariness": 18.0
+  },
+  "renderer": "gl_compatibility",
+  "rita_angry": false,
+  "rita_wake_end": 7.8975,
+  "rita_wake_start": 0.0,
+  "route_stages": [
+    {
+      "stage": "run_started",
+      "time": 0.0
+    },
+    {
+      "stage": "mug_and_coffee",
+      "time": 8.03660799999998
+    },
+    {
+      "stage": "kettle_started",
+      "time": 24.0363636363636
+    },
+    {
+      "stage": "water_boiled",
+      "time": 42.0400000000002
+    },
+    {
+      "stage": "milk_ordered",
+      "time": 52.0320120000006
+    },
+    {
+      "stage": "milk_collected",
+      "time": 66.050444000001
+    },
+    {
+      "stage": "physical_mug_filled",
+      "time": 82.0352160000014
+    },
+    {
+      "stage": "mug_stirred",
+      "time": 90.0152160000017
+    },
+    {
+      "stage": "vacuum_used",
+      "time": 205.010744000006
+    },
+    {
+      "stage": "coffee_drunk",
+      "time": 390.051116000012
+    }
+  ],
+  "run_active": false,
+  "save_checks": [
+    {
+      "case": "A_before_story",
+      "deck_preserved": true,
+      "loaded": true,
+      "position_restored": true,
+      "saved": true
+    }
+  ],
+  "spoon_held": false,
+  "stories_before_high_chaos_clear": 0,
+  "stories_finished": [
+    {
+      "id": "PHONE_STORY",
+      "outcome": "phone_found",
+      "time": 66.840000000001
+    },
+    {
+      "id": "VACUUM_STORY",
+      "outcome": "startled",
+      "time": 327.35111600001
+    }
+  ],
+  "stories_prevented": [],
+  "stories_started": [
+    {
+      "id": "PHONE_STORY",
+      "time": 50.4031640000005
+    },
+    {
+      "id": "VACUUM_STORY",
+      "time": 308.211116000009
+    }
+  ],
+  "wake_trace": [
+    {
+      "chaos": 0,
+      "last_category": "OBJECT_IMPACT",
+      "last_noise": {
+        "category": "OBJECT_IMPACT",
+        "heard_strength": 0.70614420369873,
+        "raw_strength": 5.23908033370972,
+        "source_id": "item",
+        "source_room": "office"
+      },
+      "last_source": "item",
+      "reasons": [],
+      "time": 1.75484,
+      "wake": 1.41228840739746
+    },
+    {
+      "chaos": 0,
+      "last_category": "OBJECT_IMPACT",
+      "last_noise": {
+        "category": "OBJECT_IMPACT",
+        "heard_strength": 0.70614420369873,
+        "raw_strength": 5.23908033370972,
+        "source_id": "item",
+        "source_room": "office"
+      },
+      "last_source": "item",
+      "reasons": [],
+      "time": 5.035876,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "OBJECT_IMPACT",
+      "last_noise": {
+        "category": "OBJECT_IMPACT",
+        "heard_strength": 0.70614420369873,
+        "raw_strength": 5.23908033370972,
+        "source_id": "item",
+        "source_room": "office"
+      },
+      "last_source": "item",
+      "reasons": [],
+      "time": 10.0213862857143,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "OBJECT_IMPACT",
+      "last_noise": {
+        "category": "OBJECT_IMPACT",
+        "heard_strength": 0.70614420369873,
+        "raw_strength": 5.23908033370972,
+        "source_id": "item",
+        "source_room": "office"
+      },
+      "last_source": "item",
+      "reasons": [],
+      "time": 15.0271005714286,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "OBJECT_IMPACT",
+      "last_noise": {
+        "category": "OBJECT_IMPACT",
+        "heard_strength": 0.70614420369873,
+        "raw_strength": 5.23908033370972,
+        "source_id": "item",
+        "source_room": "office"
+      },
+      "last_source": "item",
+      "reasons": [],
+      "time": 20.0193279999999,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "OBJECT_IMPACT",
+      "last_noise": {
+        "category": "OBJECT_IMPACT",
+        "heard_strength": 0.70614420369873,
+        "raw_strength": 5.23908033370972,
+        "source_id": "item",
+        "source_room": "office"
+      },
+      "last_source": "item",
+      "reasons": [],
+      "time": 25.0355279999999,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "OBJECT_IMPACT",
+      "last_noise": {
+        "category": "OBJECT_IMPACT",
+        "heard_strength": 0.70614420369873,
+        "raw_strength": 5.23908033370972,
+        "source_id": "item",
+        "source_room": "office"
+      },
+      "last_source": "item",
+      "reasons": [],
+      "time": 30.0353479999999,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "OBJECT_IMPACT",
+      "last_noise": {
+        "category": "OBJECT_IMPACT",
+        "heard_strength": 0.70614420369873,
+        "raw_strength": 5.23908033370972,
+        "source_id": "item",
+        "source_room": "office"
+      },
+      "last_source": "item",
+      "reasons": [],
+      "time": 35.015348,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "OBJECT_IMPACT",
+      "last_noise": {
+        "category": "OBJECT_IMPACT",
+        "heard_strength": 0.70614420369873,
+        "raw_strength": 5.23908033370972,
+        "source_id": "item",
+        "source_room": "office"
+      },
+      "last_source": "item",
+      "reasons": [],
+      "time": 40.0000000000001,
+      "wake": 0.0
+    },
+    {
+      "chaos": 4,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 3.1104,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "corridor"
+      },
+      "last_source": "vacuum",
+      "reasons": [
+        "phone",
+        "vacuum"
+      ],
+      "time": 45.0562960000003,
+      "wake": 7.1822592
+    },
+    {
+      "chaos": 2,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 3.1104,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "corridor"
+      },
+      "last_source": "vacuum",
+      "reasons": [
+        "phone"
+      ],
+      "time": 50.0107880000005,
+      "wake": 17.7783552
+    },
+    {
+      "chaos": 2,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 1.482624,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [
+        "cat_story"
+      ],
+      "time": 55.0399400000007,
+      "wake": 19.237824
+    },
+    {
+      "chaos": 2,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 1.482624,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [
+        "cat_story"
+      ],
+      "time": 60.0339066666676,
+      "wake": 0.0
+    },
+    {
+      "chaos": 2,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 1.482624,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [
+        "cat_story"
+      ],
+      "time": 65.012540000001,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "OBJECT_IMPACT",
+      "last_noise": {
+        "category": "OBJECT_IMPACT",
+        "heard_strength": 1.52409602966309,
+        "raw_strength": 8.82000017166138,
+        "source_id": "milk_carton",
+        "source_room": "corridor"
+      },
+      "last_source": "milk_carton",
+      "reasons": [],
+      "time": 70.0200000000011,
+      "wake": 4.54180630187988
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 1.6083899136,
+        "raw_strength": 20.0168,
+        "source_id": "washing_machine",
+        "source_room": "bathroom"
+      },
+      "last_source": "washing_machine",
+      "reasons": [],
+      "time": 75.0000000000013,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 1.6083899136,
+        "raw_strength": 20.0168,
+        "source_id": "washing_machine",
+        "source_room": "bathroom"
+      },
+      "last_source": "washing_machine",
+      "reasons": [],
+      "time": 80.0552640000013,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 1.6083899136,
+        "raw_strength": 20.0168,
+        "source_id": "washing_machine",
+        "source_room": "bathroom"
+      },
+      "last_source": "washing_machine",
+      "reasons": [],
+      "time": 85.0352160000015,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 1.6083899136,
+        "raw_strength": 20.0168,
+        "source_id": "washing_machine",
+        "source_room": "bathroom"
+      },
+      "last_source": "washing_machine",
+      "reasons": [],
+      "time": 90.0152160000017,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 1.482624,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 95.0085493333352,
+      "wake": 3.3696
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 1.482624,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 100.048549333335,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 1.482624,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 105.028549333336,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 1.482624,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 110.008549333336,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 1.482624,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 115.048549333336,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 1.482624,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 120.028549333336,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 1.482624,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 125.008549333336,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 1.482624,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 130.048549333337,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 1.482624,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 135.028549333337,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 1.482624,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 140.008549333337,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 1.482624,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 145.048549333337,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 1.482624,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 150.028549333337,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 1.482624,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 155.015348000004,
+      "wake": 3.3696
+    },
+    {
+      "chaos": 2,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 7.29,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "corridor"
+      },
+      "last_source": "vacuum",
+      "reasons": [
+        "vacuum"
+      ],
+      "time": 160.055348000004,
+      "wake": 9.0072
+    },
+    {
+      "chaos": 2,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 18.0,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "bedroom"
+      },
+      "last_source": "vacuum",
+      "reasons": [
+        "vacuum"
+      ],
+      "time": 165.048681333338,
+      "wake": 47.6712
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 7.29,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "corridor"
+      },
+      "last_source": "vacuum",
+      "reasons": [],
+      "time": 170.015348000005,
+      "wake": 46.1332799999999
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 7.29,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "corridor"
+      },
+      "last_source": "vacuum",
+      "reasons": [],
+      "time": 175.015348000005,
+      "wake": 23.6332799999998
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 7.29,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "corridor"
+      },
+      "last_source": "vacuum",
+      "reasons": [],
+      "time": 180.058070666671,
+      "wake": 0.941027999999779
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 7.29,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "corridor"
+      },
+      "last_source": "vacuum",
+      "reasons": [],
+      "time": 185.064077333338,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 7.29,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "corridor"
+      },
+      "last_source": "vacuum",
+      "reasons": [],
+      "time": 190.010744000005,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 7.29,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "corridor"
+      },
+      "last_source": "vacuum",
+      "reasons": [],
+      "time": 195.050744000005,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 7.29,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "corridor"
+      },
+      "last_source": "vacuum",
+      "reasons": [],
+      "time": 200.030744000005,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 3.4749,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 205.010744000006,
+      "wake": 7.8975
+    },
+    {
+      "chaos": 2,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 18.0,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "bedroom"
+      },
+      "last_source": "vacuum",
+      "reasons": [
+        "vacuum"
+      ],
+      "time": 210.01683028572,
+      "wake": 45.5895
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 18.0,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "bedroom"
+      },
+      "last_source": "vacuum",
+      "reasons": [],
+      "time": 215.031068000006,
+      "wake": 70.9875
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 18.0,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "bedroom"
+      },
+      "last_source": "vacuum",
+      "reasons": [],
+      "time": 220.011068000006,
+      "wake": 48.5774999999999
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 18.0,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "bedroom"
+      },
+      "last_source": "vacuum",
+      "reasons": [],
+      "time": 225.051068000006,
+      "wake": 25.8974999999998
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 18.0,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "bedroom"
+      },
+      "last_source": "vacuum",
+      "reasons": [],
+      "time": 230.031068000006,
+      "wake": 3.4874999999998
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 18.0,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "bedroom"
+      },
+      "last_source": "vacuum",
+      "reasons": [],
+      "time": 235.011068000006,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 18.0,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "bedroom"
+      },
+      "last_source": "vacuum",
+      "reasons": [],
+      "time": 240.017782666673,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 3.76966386,
+        "raw_strength": 20.0168,
+        "source_id": "washing_machine",
+        "source_room": "bathroom"
+      },
+      "last_source": "washing_machine",
+      "reasons": [],
+      "time": 245.031116000007,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 3.76966386,
+        "raw_strength": 20.0168,
+        "source_id": "washing_machine",
+        "source_room": "bathroom"
+      },
+      "last_source": "washing_machine",
+      "reasons": [],
+      "time": 250.011116000007,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 3.76966386,
+        "raw_strength": 20.0168,
+        "source_id": "washing_machine",
+        "source_room": "bathroom"
+      },
+      "last_source": "washing_machine",
+      "reasons": [],
+      "time": 255.051116000007,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 3.76966386,
+        "raw_strength": 20.0168,
+        "source_id": "washing_machine",
+        "source_room": "bathroom"
+      },
+      "last_source": "washing_machine",
+      "reasons": [],
+      "time": 260.031116000007,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 3.76966386,
+        "raw_strength": 20.0168,
+        "source_id": "washing_machine",
+        "source_room": "bathroom"
+      },
+      "last_source": "washing_machine",
+      "reasons": [],
+      "time": 265.011116000007,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 3.4749,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 270.051116000008,
+      "wake": 3.03750000000001
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 3.4749,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 275.031116000008,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 3.4749,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 280.011116000008,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 3.4749,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 285.051116000008,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 3.4749,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 290.031116000008,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 3.4749,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 295.011116000009,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 3.4749,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 300.051116000009,
+      "wake": 0.0
+    },
+    {
+      "chaos": 2,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 3.4749,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [
+        "vacuum"
+      ],
+      "time": 305.031116000009,
+      "wake": 0.0
+    },
+    {
+      "chaos": 4,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 18.0,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "bedroom"
+      },
+      "last_source": "vacuum",
+      "reasons": [
+        "vacuum",
+        "cat_story"
+      ],
+      "time": 310.011116000009,
+      "wake": 45.5895
+    },
+    {
+      "chaos": 2,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 18.0,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "bedroom"
+      },
+      "last_source": "vacuum",
+      "reasons": [
+        "cat_story"
+      ],
+      "time": 315.051116000009,
+      "wake": 69.6375
+    },
+    {
+      "chaos": 2,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 18.0,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "bedroom"
+      },
+      "last_source": "vacuum",
+      "reasons": [
+        "cat_story"
+      ],
+      "time": 320.031116000009,
+      "wake": 47.2274999999999
+    },
+    {
+      "chaos": 2,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 18.0,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "bedroom"
+      },
+      "last_source": "vacuum",
+      "reasons": [
+        "cat_story"
+      ],
+      "time": 325.01111600001,
+      "wake": 24.8174999999998
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 18.0,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "bedroom"
+      },
+      "last_source": "vacuum",
+      "reasons": [],
+      "time": 330.05111600001,
+      "wake": 2.1374999999998
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 18.0,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "bedroom"
+      },
+      "last_source": "vacuum",
+      "reasons": [],
+      "time": 335.03111600001,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 18.0,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "bedroom"
+      },
+      "last_source": "vacuum",
+      "reasons": [],
+      "time": 340.01111600001,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "APPLIANCE",
+      "last_noise": {
+        "category": "APPLIANCE",
+        "heard_strength": 18.0,
+        "raw_strength": 18.0,
+        "source_id": "vacuum",
+        "source_room": "bedroom"
+      },
+      "last_source": "vacuum",
+      "reasons": [],
+      "time": 345.05111600001,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 3.4749,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 350.031116000011,
+      "wake": 4.38750000000001
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 3.4749,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 355.011116000011,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 3.4749,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 360.051116000011,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 3.4749,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 365.031116000011,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 3.4749,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 370.011116000011,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 3.4749,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 375.051116000012,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 3.4749,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 380.031116000012,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 3.4749,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 385.011116000012,
+      "wake": 0.0
+    },
+    {
+      "chaos": 0,
+      "last_category": "VOICE_CALL",
+      "last_noise": {
+        "category": "VOICE_CALL",
+        "heard_strength": 3.4749,
+        "raw_strength": 11.0,
+        "source_id": "denis_reply",
+        "source_room": "office"
+      },
+      "last_source": "denis_reply",
+      "reasons": [],
+      "time": 390.051116000012,
+      "wake": 7.8975
+    }
+  ],
+  "wall_duration_seconds": 32.465
+}

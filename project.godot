@@ -1,0 +1,62 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="MY NAME IS DENIS: COLD MILK, PLEASE"
+config/version="2.0.0"
+run/main_scene="res://scenes/game.tscn"
+config/features=PackedStringArray("4.4", "GL Compatibility")
+boot_splash/bg_color=Color(0.025, 0.03, 0.045, 1)
+boot_splash/show_image=false
+
+[autoload]
+
+AudioManager="*res://scripts/autoload/audio_manager.gd"
+NoiseManager="*res://scripts/autoload/noise_manager.gd"
+RitaSleep="*res://scripts/autoload/rita_sleep.gd"
+CallManager="*res://scripts/autoload/call_manager.gd"
+QuestManager="*res://scripts/autoload/quest_manager.gd"
+RunStats="*res://scripts/autoload/run_stats.gd"
+RitaDemands="*res://scripts/autoload/rita_demands.gd"
+MilkDelivery="*res://scripts/autoload/milk_delivery.gd"
+CoffeeDelivery="*res://scripts/autoload/coffee_delivery.gd"
+VoiceManager="*res://scripts/autoload/voice_manager.gd"
+VisualEffects="*res://scripts/autoload/visual_effects.gd"
+ScreenEffects="*res://scripts/autoload/screen_effects.gd"
+WeatherSystem="*res://scripts/autoload/weather_system.gd"
+AchievementSystem="*res://scripts/autoload/achievement_system.gd"
+DifficultyManager="*res://scripts/autoload/difficulty_manager.gd"
+PhotoMode="*res://scripts/autoload/photo_mode.gd"
+TutorialSystem="*res://scripts/autoload/tutorial_system.gd"
+SaveManager="*res://scripts/autoload/save_manager.gd"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/size/window_width_override=1280
+window/size/window_height_override=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
+window/handheld/orientation=1
+
+[physics]
+
+common/enable_pause_aware_picking=true
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true
+anti_aliasing/quality/msaa_3d=2
+environment/defaults/default_clear_color=Color(0.018, 0.022, 0.035, 1)
+anti_aliasing/quality/screen_space_aa=1

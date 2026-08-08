@@ -1,0 +1,1821 @@
+diff --git a/scripts/apartment_builder.gd b/scripts/apartment_builder.gd
+index 0b2b917..7d0945c 100644
+--- a/scripts/apartment_builder.gd
++++ b/scripts/apartment_builder.gd
+@@ -15,8 +15,15 @@ const SMART_TV_SCRIPT := preload("res://scripts/interactions/smart_tv.gd")
+ const HEADPHONES_SCRIPT := preload("res://scripts/interactions/noise_cancelling_headphones.gd")
+ const SMART_KETTLE_SCRIPT := preload("res://scripts/interactions/smart_kettle.gd")
+ const CONTAINER_VOLUME_SCRIPT := preload("res://scripts/liquid/container_volume.gd")
++const LIQUID_RECEIVER_SCRIPT := preload("res://scripts/liquid/liquid_receiver.gd")
++const LIQUID_SURFACE_SCRIPT := preload("res://scripts/liquid/liquid_surface.gd")
++const MUG_CONTENT_SCRIPT := preload("res://scripts/coffee/mug_content_controller.gd")
++const SPILL_MANAGER_SCRIPT := preload("res://scripts/liquid/spill_manager.gd")
++const KETTLE_STATE_MACHINE_SCRIPT := preload("res://scripts/liquid/kettle_state_machine.gd")
++const STIR_CONTROLLER_SCRIPT := preload("res://scripts/coffee/stir_controller.gd")
+ const WATER_DEF := preload("res://resources/liquids/water.tres")
+ const MILK_DEF := preload("res://resources/liquids/milk.tres")
++const DEBUG_START_KETTLE_READY := true
+ 
+ var _materials: Dictionary = {}
+ var _objects: Dictionary = {}
+@@ -234,6 +241,12 @@ func _create_living_office() -> void:
+     screen_pivot.add_child(screen_label)
+     _objects["laptop"] = laptop
+ 
++    # Компактная зона готовой кружки рядом с ноутбуком.
++    var coffee_zone := _fixed_root("CoffeePlacementZone", Vector3(-4.88, 0.825, -5.22))
++    coffee_zone.add_to_group("coffee_placement_zone")
++    _cylinder_child(coffee_zone, "Coaster", Vector3.ZERO, Vector3.ZERO, 0.18, 0.018, "black", false)
++    _objects["coffee_placement_zone"] = coffee_zone
++
+     _create_office_chair(Vector3(-5.65, 0.0, -3.72), 0.0)
+     _create_desk_lamp(Vector3(-6.45, 0.82, -5.28))
+     _create_notebook_stack(Vector3(-4.75, 0.84, -5.28))
+@@ -805,9 +818,19 @@ func _create_gameplay_objects() -> void:
+         var beer := _create_match_beer("MatchBeerBottle_%d" % beer_index, beer_positions[beer_index], beer_index)
+         _objects["match_beer" if beer_index == 0 else "match_beer_%d" % beer_index] = beer
+ 
++    # SpillManager — система луж (§11 миссии), должен существовать до первого пролива
++    var spill_mgr := SPILL_MANAGER_SCRIPT.new()
++    spill_mgr.name = "SpillManager"
++    add_child(spill_mgr)
++    _objects["spill_manager"] = spill_mgr
++
+     # Mug starts behind the interactive upper-cabinet door.
+     var mug := _physical_item("Mug", &"mug", "КРУЖКА", Vector3(5.90, 1.67, -5.57), "mug", 0.42, true)
+     _objects["mug"] = mug
++    # Регистрируем MugContentController в квесте — кофе считается готовым по реальному составу
++    var mug_ctrl := mug.get_node_or_null("MugContentController")
++    if mug_ctrl:
++        QuestManager.register_mug_content_controller(mug_ctrl)
+ 
+     # Coffee is physically present behind the closed drawer front.
+     var coffee := _physical_item("CoffeeJar", &"coffee_jar", "РАСТВОРИМЫЙ КОФЕ", Vector3(4.60, 0.72, -5.43), "coffee_jar", 0.62, true)
+@@ -816,6 +839,10 @@ func _create_gameplay_objects() -> void:
+     var kettle := _physical_item("Kettle", &"kettle", "ЧАЙНИК", Vector3(3.55, 1.36, -5.39), "kettle", 1.05, true)
+     _objects["kettle"] = kettle
+ 
++    var spoon := _physical_item("Teaspoon", &"spoon", "ЧАЙНАЯ ЛОЖКА", Vector3(4.82, 1.13, -4.92), "spoon", 0.08, false)
++    spoon.rotation_degrees.x = 90.0
++    _objects["spoon"] = spoon
++
+     var towel := _physical_item("Towel", &"towel", "ПОЛОТЕНЦЕ", Vector3(6.43, 1.12, -4.20), "towel", 0.18, false)
+     towel.add_to_group("noise_dampeners")
+     _objects["towel"] = towel
+@@ -1316,12 +1343,38 @@ func _physical_item(node_name: String, item_id: StringName, display: String, pos
+     match model_type:
+         "mug":
+             _cylinder_child(body, "Mesh", Vector3.ZERO, Vector3.ZERO, 0.135, 0.25, "white", false)
+-            _cylinder_child(body, "CoffeeSurface", Vector3(0.0, 0.128, 0.0), Vector3.ZERO, 0.105, 0.012, "coffee", false).visible = false
+             _torus_child(body, "Handle", Vector3(0.145, 0.0, 0.0), Vector3(90.0, 0.0, 0.0), 0.045, 0.085, "white")
+             var mug_shape := CylinderShape3D.new()
+             mug_shape.radius = 0.14
+             mug_shape.height = 0.26
+             _rigid_collision(body, mug_shape)
++
++            # MugContentController — содержимое кружки (мл жидкостей + г порошка, температура, is_stirred)
++            var mcc := MUG_CONTENT_SCRIPT.new()
++            mcc.name = "MugContentController"
++            mcc.capacity_ml = 350.0
++            body.add_child(mcc)
++
++            # LiquidReceiver (MugOpeningArea) — отверстие кружки сверху (§9 миссии, r=0.042)
++            var receiver := LIQUID_RECEIVER_SCRIPT.new()
++            receiver.name = "LiquidReceiver"
++            receiver.position = Vector3(0.0, 0.13, 0.0)  # верхняя кромка кружки
++            receiver.detection_radius = 0.042
++            receiver.detection_height = 0.020
++            receiver.mug_content_controller_path = NodePath("../MugContentController")
++            body.add_child(receiver)
++
++            # LiquidSurface — горизонтальная поверхность жидкости с lag/slosh (§10/§17)
++            var surface := LIQUID_SURFACE_SCRIPT.new()
++            surface.name = "LiquidSurface"
++            body.add_child(surface)
++            surface.setup(body, mcc)
++
++            # SpoonTip — точка кончика ложки для перемешивания (§16 миссии)
++            var spoon_tip := Node3D.new()
++            spoon_tip.name = "SpoonTip"
++            spoon_tip.position = Vector3(0.0, 0.10, 0.0)
++            body.add_child(spoon_tip)
+         "coffee_jar":
+             _cylinder_child(body, "Mesh", Vector3.ZERO, Vector3.ZERO, 0.145, 0.32, "brown", false)
+             _cylinder_child(body, "Label", Vector3(0.0, -0.015, 0.0), Vector3.ZERO, 0.148, 0.15, "fabric_rust", false)
+@@ -1365,13 +1418,26 @@ func _physical_item(node_name: String, item_id: StringName, display: String, pos
+             pour_dir.position = Vector3(0.50, 0.08, 0.0)
+             body.add_child(pour_dir)
+             
+-            # ContainerVolume с водой
++            # ContainerVolume чайника. Для вертикального среза один debug-флаг
++            # даёт ровно 300 мл горячей воды; объём затем только расходуется.
+             var cv := CONTAINER_VOLUME_SCRIPT.new()
+             cv.name = "ContainerVolume"
+             cv.container_type = CONTAINER_VOLUME_SCRIPT.ContainerType.KETTLE
+-            cv.capacity_ml = 1500.0
++            cv.capacity_ml = 1700.0
++            cv.default_liquid = WATER_DEF
+             body.add_child(cv)
+-            cv.fill_completely(WATER_DEF)
++
++            # KettleStateMachine — состояния EMPTY→...→POURING, температура (§5 миссии)
++            var ksm := KETTLE_STATE_MACHINE_SCRIPT.new()
++            ksm.name = "KettleStateMachine"
++            ksm.container_volume = cv
++            body.add_child(ksm)
++            if DEBUG_START_KETTLE_READY:
++                cv.add_liquid(300.0, WATER_DEF)
++                ksm.temperature_c = 95.0
++                ksm.state = KETTLE_STATE_MACHINE_SCRIPT.KettleState.HELD
++                QuestManager.kettle_filled = true
++                QuestManager.water_boiled = true
+             
+             # NodePath'ы
+             body.grip_point_path = NodePath("GripPoint")
+@@ -1389,6 +1455,7 @@ func _physical_item(node_name: String, item_id: StringName, display: String, pos
+         "milk_carton":
+             _box_child(body, "Mesh", Vector3.ZERO, Vector3(0.22, 0.30, 0.11), "white", false)
+             _box_child(body, "Label", Vector3(0.0, -0.02, 0.057), Vector3(0.18, 0.18, 0.006), "fabric_blue", false)
++            _cylinder_child(body, "Cap", Vector3(0.065, 0.17, 0.0), Vector3.ZERO, 0.032, 0.035, "fabric_blue", false)
+             var carton_label := _label3d("МОЛОКО", Vector3(0.0, -0.02, 0.061), Color("273c48"), 14)
+             body.add_child(carton_label)
+             var carton_shape := BoxShape3D.new()
+@@ -1402,8 +1469,53 @@ func _physical_item(node_name: String, item_id: StringName, display: String, pos
+             cv.capacity_ml = 1000.0
+             body.add_child(cv)
+             cv.fill_completely(MILK_DEF)
+-            
++
++            var grip_pt := Node3D.new()
++            grip_pt.name = "GripPoint"
++            grip_pt.position = Vector3(0.0, 0.05, 0.0)
++            body.add_child(grip_pt)
++            var pour_grip := Node3D.new()
++            pour_grip.name = "PourGripPoint"
++            pour_grip.position = Vector3(0.0, 0.10, 0.0)
++            body.add_child(pour_grip)
++            var pour_origin := Node3D.new()
++            pour_origin.name = "PourOrigin"
++            pour_origin.position = Vector3(0.065, 0.19, 0.0)
++            body.add_child(pour_origin)
++            var pour_dir := Node3D.new()
++            pour_dir.name = "PourDirection"
++            pour_dir.position = Vector3(0.25, 0.19, 0.0)
++            body.add_child(pour_dir)
++
++            body.grip_point_path = NodePath("GripPoint")
++            body.pour_grip_point_path = NodePath("PourGripPoint")
++            body.pour_origin_path = NodePath("PourOrigin")
++            body.pour_direction_path = NodePath("PourDirection")
+             body.container_volume_path = NodePath("ContainerVolume")
++        "spoon":
++            _cylinder_child(body, "Handle", Vector3(0.0, 0.015, 0.0), Vector3.ZERO, 0.012, 0.28, "metal", false)
++            var bowl := _sphere_child(body, "Bowl", Vector3(0.0, -0.155, 0.0), 0.055, "metal", false)
++            bowl.scale = Vector3(0.62, 0.22, 1.0)
++            var spoon_shape := CapsuleShape3D.new()
++            spoon_shape.radius = 0.026
++            spoon_shape.height = 0.36
++            _rigid_collision(body, spoon_shape)
++            var grip_pt := Node3D.new()
++            grip_pt.name = "GripPoint"
++            grip_pt.position = Vector3(0.0, 0.09, 0.0)
++            body.add_child(grip_pt)
++            var stir_grip := Node3D.new()
++            stir_grip.name = "StirGripPoint"
++            stir_grip.position = Vector3(0.0, 0.07, 0.0)
++            body.add_child(stir_grip)
++            var spoon_tip := Node3D.new()
++            spoon_tip.name = "SpoonTip"
++            spoon_tip.position = Vector3(0.0, -0.19, 0.0)
++            body.add_child(spoon_tip)
++            var stir := STIR_CONTROLLER_SCRIPT.new()
++            stir.name = "StirController"
++            body.add_child(stir)
++            body.grip_point_path = NodePath("GripPoint")
+     add_child(body)
+     return body
+ 
+diff --git a/scripts/autoload/quest_manager.gd b/scripts/autoload/quest_manager.gd
+index 91a142e..f8c27b2 100644
+--- a/scripts/autoload/quest_manager.gd
++++ b/scripts/autoload/quest_manager.gd
+@@ -153,6 +153,8 @@ func pour_coffee_powder() -> String:
+     if not _item_near_node(&"mug", "CoffeePowderZone", 1.25):
+         return "ПОСТАВЬ КРУЖКУ В ЗОНУ ЗАСЫПКИ КОФЕ"
+     coffee_powder_poured = true
++    if mug_content_controller != null and mug_content_controller.has_method("add_powder"):
++        mug_content_controller.call("add_powder", 10.0)
+     notification_requested.emit("КОФЕ НАСЫПАН В КРУЖКУ")
+     quest_updated.emit(get_state())
+     return "КОФЕ НАСЫПАН В КРУЖКУ"
+diff --git a/scripts/coffee/mug_content_controller.gd b/scripts/coffee/mug_content_controller.gd
+index 33351d9..e4758fa 100644
+--- a/scripts/coffee/mug_content_controller.gd
++++ b/scripts/coffee/mug_content_controller.gd
+@@ -1,87 +1,207 @@
+ # MugContentController.gd
+-# Управляет содержимым кружки: объём кофе, молока, перемешивание.
++# Управляет содержимым кружки: объём жидкостей (мл), порошок (граммы),
++# температура, перемешивание, перелив.
++# Единицы: жидкости в мл, порошок в граммах (§3 миссии).
+ class_name MugContentController
+ extends Node
+ 
+-## Сигнал: содержимое кружки изменилось
+-signal content_changed(total_ml: float, components: Dictionary)
++## Сигнал: содержимое изменилось (для UI/визуала)
++signal content_changed(components: Dictionary)
+ 
+-## Сигнал: кофе готов (достаточно воды + кофе + молоко)
++## Сигнал: кофе готов к употреблению (все условия выполнены)
+ signal coffee_ready()
+ 
+-## Максимальный объём кружки (мл)
+-@export var capacity_ml: float = 350.0
++## Сигнал: кружка переполнена — излишек пролился
++signal overflowed(amount_ml: float, position: Vector3)
++
++## Сигнал: температура изменилась
++signal temperature_changed(temp_c: float)
+ 
+-## Текущие компоненты: {"water": ml, "coffee_powder": ml, "milk": ml}
+-var components: Dictionary = {
+-	"water": 0.0,
+-	"coffee_powder": 0.0,
+-	"milk": 0.0
+-}
+ 
+-## Общий объём жидкости в кружке
+-var total_ml: float = 0.0
++## Ёмкость кружки (мл)
++@export var capacity_ml: float = 350.0
+ 
+-## Флаг: кофе готов
++## Минимальные пороги готовности
++const WATER_MIN_ML: float = 170.0
++const WATER_REC_MIN_ML: float = 200.0
++const WATER_REC_MAX_ML: float = 230.0
++const POWDER_MIN_G: float = 5.0
++const POWDER_REC_MIN_G: float = 8.0
++const POWDER_REC_MAX_G: float = 12.0
++const MILK_MIN_ML: float = 25.0
++const MILK_REC_MIN_ML: float = 40.0
++const MILK_REC_MAX_ML: float = 70.0
++## Минимальная температура для готового кофе (§5 миссии)
++const TEMP_MIN_C: float = 70.0
++
++## --- Состав (§3 миссии: жидкости в мл, порошок в граммах) ---
++var water_ml: float = 0.0
++var milk_ml: float = 0.0
++var coffee_powder_g: float = 0.0  # ГРАММЫ, не мл
++
++## Температура содержимого (°C)
++var temperature_c: float = 20.0
++
++## Перемешано ли ложкой (3+ оборота — §16 миссии)
++var is_stirred: bool = false
++
++## Был ли перелив (для статистики)
++var was_overflowed: bool = false
++
++## Флаг готовности
+ var is_ready: bool = false
+ 
++## Остывание содержимого (°C/сек)
++@export var cool_rate: float = 0.25
++
++
++func _process(delta: float) -> void:
++	# Плавное остывание
++	if total_liquid_ml() > 0.0 and temperature_c > 20.0:
++		temperature_c = maxf(20.0, temperature_c - cool_rate * delta)
++		temperature_changed.emit(temperature_c)
++
++
++## Общий объём жидкости (мл, порошок НЕ считается жидкостью).
++func total_liquid_ml() -> float:
++	return water_ml + milk_ml
++
++
++## Добавить жидкость (мл). Возвращает реально принятый объём.
++## Излишек → overflow с созданием пролива (§10 миссии).
++func add_liquid(amount_ml: float, defn: LiquidDefinition, source_temp_c: float = 20.0) -> float:
++	if amount_ml <= 0.0 or defn == null:
++		return 0.0
++	var space_left: float = capacity_ml - total_liquid_ml()
++	var accepted: float = minf(amount_ml, maxf(space_left, 0.0))
++	var overflow: float = amount_ml - accepted
++
++	if accepted > 0.0:
++		# Смешиваем температуру пропорционально объёмам
++		var old_total := total_liquid_ml()
++		var new_total := old_total + accepted
++		if new_total > 0.0:
++			temperature_c = (temperature_c * old_total + source_temp_c * accepted) / new_total
++			temperature_changed.emit(temperature_c)
++		match defn.id:
++			"water":
++				water_ml += accepted
++			"milk":
++				milk_ml += accepted
++			"coffee_mix":
++				# Горячая вода с растворённым кофе — пополам
++				water_ml += accepted * 0.9
++				coffee_powder_g += accepted * 0.1
++			_:
++				water_ml += accepted
++		# Любое добавление жидкости сбрасывает перемешивание
++		is_stirred = false
++
++	if overflow > 0.0:
++		was_overflowed = true
++		var origin := Vector3.ZERO
++		var parent_3d := get_parent() as Node3D
++		if parent_3d:
++			origin = parent_3d.global_position
++		overflowed.emit(overflow, origin)
++		# Создаём лужу перелива (coffee_mix)
++		var sm := get_tree().get_first_node_in_group("spill_manager")
++		if sm and sm.has_method("spawn_spill_typed"):
++			sm.call("spawn_spill_typed", origin, "coffee_mix", overflow)
+ 
+-## Добавить жидкость в кружку.
+-func add_liquid(amount_ml: float, defn: LiquidDefinition) -> void:
+-	if amount_ml <= 0.0:
+-		return
+-	
+-	var space_left: float = capacity_ml - total_ml
+-	if space_left <= 0.0:
+-		return
+-	
+-	var actual: float = minf(amount_ml, space_left)
+-	total_ml += actual
+-	
+-	match defn.id:
+-		"water":
+-			components["water"] += actual
+-		"milk":
+-			components["milk"] += actual
+-		"coffee_mix":
+-			components["coffee_powder"] += actual
+-		_:
+-			components["water"] += actual
+-	
+-	content_changed.emit(total_ml, components)
+ 	_check_readiness()
++	content_changed.emit(get_components())
++	return accepted
++
++
++## Добавить порошок (ГРАММЫ — §3/§15 миссии).
++func add_powder(amount_g: float) -> float:
++	if amount_g <= 0.0:
++		return 0.0
++	coffee_powder_g += amount_g
++	# Порошок не считается жидкостью, не вызывает перелив
++	_check_readiness()
++	content_changed.emit(get_components())
++	return amount_g
+ 
+ 
+-## Проверить, готов ли кофе.
+-func _check_readiness():
+-	if is_ready:
++## Отметить перемешивание (вызывается StirController после 3+ оборотов).
++func set_stirred() -> void:
++	if is_stirred:
+ 		return
+-	# Условия готовности: достаточно воды (>=170мл), есть кофе, есть молоко (>=25мл)
+-	var has_enough_water: bool = components["water"] >= 170.0
+-	var has_coffee: bool = components["coffee_powder"] >= 5.0
+-	var has_milk: bool = components["milk"] >= 25.0
+-	
+-	if has_enough_water and has_coffee and has_milk:
++	is_stirred = true
++	_check_readiness()
++	content_changed.emit(get_components())
++
++
++## Словарь компонентов (для сигнала/UI).
++func get_components() -> Dictionary:
++	return {
++		"water_ml": water_ml,
++		"milk_ml": milk_ml,
++		"coffee_powder_g": coffee_powder_g,
++		"total_liquid_ml": total_liquid_ml(),
++		"temperature_c": temperature_c,
++		"is_stirred": is_stirred,
++		"is_ready": is_ready,
++		"was_overflowed": was_overflowed,
++		"capacity_ml": capacity_ml,
++	}
++
++
++## Цвет поверхности в зависимости от состава (§10 миссии).
++func get_surface_color() -> Color:
++	if total_liquid_ml() <= 0.0 and coffee_powder_g <= 0.0:
++		return Color(0, 0, 0, 0)
++	# Только порошок — тёмно-коричневый
++	if total_liquid_ml() <= 0.0:
++		return Color(0.23, 0.13, 0.06, 0.95)
++	# Кофе с водой — коричневый; молоко осветляет
++	var milk_frac: float = milk_ml / maxf(total_liquid_ml(), 1.0)
++	var base := Color(0.20, 0.10, 0.04, 0.92)
++	var milk_col := Color(0.55, 0.42, 0.28, 0.95)
++	return base.lerp(milk_col, clampf(milk_frac * 2.2, 0.0, 1.0))
++
++
++## Проверка готовности кофе (все условия §3/§5/§16).
++func _check_readiness() -> void:
++	var ready: bool = (
++		water_ml >= WATER_MIN_ML
++		and coffee_powder_g >= POWDER_MIN_G
++		and milk_ml >= MILK_MIN_ML
++		and temperature_c >= TEMP_MIN_C
++		and is_stirred
++	)
++	if ready and not is_ready:
+ 		is_ready = true
++		if get_parent() != null:
++			get_parent().set_meta("coffee_ready", true)
+ 		coffee_ready.emit()
+-
+-
+-## Получить пропорции для UI (0.0-1.0)
+-func get_fill_fractions() -> Dictionary:
+-	var result: Dictionary = {}
+-	for key in components:
+-		result[key] = components[key] / capacity_ml
+-	return result
+-
+-
+-## Процент заполнения (0.0-1.0)
+-func get_fill_percent() -> float:
+-	return clampf(total_ml / capacity_ml, 0.0, 1.0)
+-
+-
+-## Очистить кружку
+-func clear():
+-	components = {"water": 0.0, "coffee_powder": 0.0, "milk": 0.0}
+-	total_ml = 0.0
++	elif not ready:
++		is_ready = false
++		if get_parent() != null:
++			get_parent().set_meta("coffee_ready", false)
++
++
++## Выпить глоток (мл). Возвращает реально выпитое.
++func drink_sip(amount_ml: float) -> float:
++	var total := total_liquid_ml()
++	if total <= 0.0:
++		return 0.0
++	var sip: float = minf(amount_ml, total)
++	var frac: float = sip / total
++	water_ml -= water_ml * frac
++	milk_ml -= milk_ml * frac
++	content_changed.emit(get_components())
++	return sip
++
++
++## Полностью опустошить кружку.
++func empty() -> void:
++	water_ml = 0.0
++	milk_ml = 0.0
++	coffee_powder_g = 0.0
++	temperature_c = 20.0
++	is_stirred = false
+ 	is_ready = false
+-	content_changed.emit(0.0, components)
++	content_changed.emit(get_components())
+diff --git a/scripts/game.gd b/scripts/game.gd
+index e290fac..49531bc 100644
+--- a/scripts/game.gd
++++ b/scripts/game.gd
+@@ -497,6 +497,24 @@ func _run_optional_tests() -> void:
+     for group_name in required_groups:
+         assert(not get_tree().get_nodes_in_group(String(group_name)).is_empty(), "Missing required group: %s" % String(group_name))
+     assert(get_tree().get_first_node_in_group("player") != null, "Player missing")
++    var route_kettle := builder._objects.get("kettle") as RigidBody3D
++    var route_kettle_volume := route_kettle.get_node("ContainerVolume") as ContainerVolume
++    var route_kettle_state := route_kettle.get_node("KettleStateMachine") as KettleStateMachine
++    assert(absf(route_kettle_volume.current_ml - 300.0) < 0.01 and absf(route_kettle_state.temperature_c - 95.0) < 0.01, "Debug kettle is not ready with 300 ml at 95 C")
++    assert(route_kettle.get_node_or_null("GripPoint") != null and route_kettle.get_node_or_null("PourGripPoint") != null and route_kettle.get_node_or_null("PourOrigin") != null and route_kettle.get_node_or_null("PourDirection") != null, "Kettle pour anchors are incomplete")
++    var coffee_route_mug := builder._objects.get("mug") as RigidBody3D
++    assert(coffee_route_mug.get_node_or_null("LiquidReceiver") is LiquidReceiver and coffee_route_mug.get_node_or_null("MugContentController") is MugContentController and coffee_route_mug.get_node_or_null("LiquidSurface") is LiquidSurface, "Runtime mug liquid nodes are incomplete")
++    var route_milk := builder._objects.get("milk_carton") as RigidBody3D
++    assert(route_milk.get_node_or_null("ContainerVolume") is ContainerVolume and route_milk.get_node_or_null("PourOrigin") != null and route_milk.get_node_or_null("PourDirection") != null and route_milk.get_node_or_null("PourGripPoint") != null, "Milk does not reuse the physical pour anchors")
++    var route_spoon := builder._objects.get("spoon") as RigidBody3D
++    assert(route_spoon != null and route_spoon.get_node_or_null("SpoonTip") != null and route_spoon.get_node_or_null("StirController") is StirController, "Physical teaspoon is incomplete")
++    var trajectory_probe := PourController.new()
++    add_child(trajectory_probe)
++    assert(trajectory_probe.start_pouring(route_kettle), "Ready kettle cannot enter pour mode")
++    trajectory_probe._stream.update_stream(route_kettle.call("get_pour_origin_global_position"), route_kettle.call("get_pour_direction_global"), 120.0, 0.015, 1.0)
++    assert(trajectory_probe._stream.last_trajectory.size() == 15, "Visual and physical stream do not share the required 14-segment trajectory")
++    trajectory_probe.stop_pouring()
++    trajectory_probe.queue_free()
+     assert(get_tree().get_first_node_in_group("milk_delivery_pickup") != null, "Milk courier pickup is missing at the entrance")
+     var player_camera := player.get_node_or_null("Camera") as Camera3D
+     assert(player_camera != null, "First-person camera is missing")
+@@ -1081,10 +1099,22 @@ func _run_optional_tests() -> void:
+     finish_kettle.set_meta("filled", false)
+     finish_kettle.set_meta("fill_progress", 0.0)
+     finish_kettle.set_meta("heat", 0.0)
+-    finish_mug.get_node("CoffeeSurface").visible = true
+-    finish_mug.set_meta("coffee_ready", true)
+-    QuestManager.milk_poured = true
+-    QuestManager.coffee_made = true
++    var finish_content := finish_mug.get_node("MugContentController") as MugContentController
++    finish_content.add_powder(10.0)
++    finish_content.add_liquid(200.0, load("res://resources/liquids/water.tres"), 95.0)
++    finish_content.add_liquid(50.0, load("res://resources/liquids/milk.tres"), 8.0)
++    var finish_spoon := builder._objects.get("spoon") as RigidBody3D
++    var finish_tip := finish_spoon.get_node("SpoonTip") as Node3D
++    var finish_stir := finish_spoon.get_node("StirController") as StirController
++    finish_spoon.held = true
++    finish_tip.global_position = finish_mug.to_global(Vector3(0.06, 0.0, 0.0))
++    finish_stir.begin_stir(finish_tip, finish_mug, finish_content)
++    for stir_step in range(101):
++        var stir_angle := TAU * 3.2 * float(stir_step) / 100.0
++        finish_tip.global_position = finish_mug.to_global(Vector3(cos(stir_angle) * 0.06, 0.0, sin(stir_angle) * 0.06))
++        finish_stir._process(0.03)
++    finish_spoon.held = false
++    assert(finish_content.is_stirred and finish_stir.get_rotations() >= 3.0, "Three physical spoon rotations were not counted")
+     assert(not String(QuestManager.return_to_desk()).contains("ЗАВЕРШЁН"), "Laptop still ends the run before Denis drinks the coffee")
+     player.set("held_item", finish_mug)
+     finish_mug.call("on_picked_up")
+@@ -1092,7 +1122,7 @@ func _run_optional_tests() -> void:
+     player.set("_drink_elapsed", 2.14)
+     player.call("_update_drink_animation", 0.02)
+     assert(QuestManager.coffee_drunk and not RunStats.run_active, "The run does not finish after the complete coffee sip")
+-    assert(not finish_mug.get_node("CoffeeSurface").visible, "Coffee remains visible after it was drunk")
++    assert(finish_content.total_liquid_ml() <= 0.01, "Coffee remains in the mug after it was drunk")
+     var sorted_board: Array = RunStats.sort_leaderboard_entries([
+         {"name": "BALANCE", "time": 70.0, "balance": 900.0, "score": 100},
+         {"name": "FAST", "time": 60.0, "balance": -500.0, "score": 50},
+diff --git a/scripts/interactions/physical_item.gd b/scripts/interactions/physical_item.gd
+index 98b4880..d132167 100644
+--- a/scripts/interactions/physical_item.gd
++++ b/scripts/interactions/physical_item.gd
+@@ -65,10 +65,16 @@ func get_pour_direction_global() -> Vector3:
+ ## Войти в режим розлива (вызывается из player_controller).
+ func enter_pour_mode() -> void:
+     pour_mode = true
++    var kettle_state := get_node_or_null("KettleStateMachine")
++    if kettle_state and kettle_state.has_method("transition_to"):
++        kettle_state.call("transition_to", KettleStateMachine.KettleState.POURING)
+ 
+ ## Выйти из режима розлива.
+ func exit_pour_mode() -> void:
+     pour_mode = false
++    var kettle_state := get_node_or_null("KettleStateMachine")
++    if kettle_state and kettle_state.has_method("stop_pouring"):
++        kettle_state.call("stop_pouring")
+ 
+ ## Есть ли контейнер с жидкостью?
+ func has_liquid_container() -> bool:
+@@ -78,6 +84,10 @@ func has_liquid_container() -> bool:
+ func has_pourable_liquid() -> bool:
+     return _container_volume != null and not _container_volume.is_empty()
+ 
++## Вернуть ContainerVolume (для PourController/WaterSource).
++func get_container_volume() -> ContainerVolume:
++    return _container_volume
++
+ ## Tilt angle в градусах относительно нормального положения (0 = вертикально, 90 = горизонтально).
+ ## Вычисляется по разнице между глобальной -Y и направлением носика.
+ func get_tilt_angle_deg() -> float:
+@@ -170,11 +180,23 @@ func interact(actor, mode: int) -> String:
+ func _mug_interact(actor, mode: int) -> String:
+     if held:
+         return "ПОСТАВЬ КРУЖКУ НА СТОЛ"
++    if bool(get_meta("coffee_ready", false)):
++        if _near_coffee_placement_zone():
++            if actor != null and actor.has_method("begin_drink_coffee") and actor.call("begin_drink_coffee", self):
++                return "ДЕНИС ПЬЁТ КОФЕ"
++            return "НЕ УДАЁТСЯ ВЫПИТЬ КОФЕ"
++        return "ПРИНЕСИ КРУЖКУ К ПОДСТАВКЕ У НОУТБУКА"
+     var zone := _nearest_pour_zone()
+     if zone != null:
+         return await zone.interact(actor, mode)
+     return "ЛКМ — ВЗЯТЬ КРУЖКУ"
+ 
++func _near_coffee_placement_zone() -> bool:
++    for zone in get_tree().get_nodes_in_group("coffee_placement_zone"):
++        if zone is Node3D and global_position.distance_to((zone as Node3D).global_position) <= 0.48:
++            return true
++    return false
++
+ func _nearest_pour_zone() -> Node3D:
+     var nearest: Node3D = null
+     var nearest_dist := MUG_ZONE_RADIUS
+@@ -189,11 +211,13 @@ func _nearest_pour_zone() -> Node3D:
+ 
+ func get_prompt(_actor) -> String:
+     if item_id == &"mug" and not held:
++        if bool(get_meta("coffee_ready", false)):
++            if _near_coffee_placement_zone():
++                return "E — ВЫПИТЬ КОФЕ"
++            return "ЛКМ — ВЗЯТЬ КОФЕ И ОТНЕСТИ К НОУТБУКУ"
+         var zone := _nearest_pour_zone()
+         if zone != null:
+             return zone.get_prompt(_actor)
+-        if bool(get_meta("coffee_ready", false)):
+-            return "ЛКМ — ВЗЯТЬ ГОРЯЧИЙ КОФЕ  •  ПОТОМ E — ВЫПИТЬ"
+         return "E — ВЗАИМОДЕЙСТВИЕ  |  ЛКМ — ВЗЯТЬ: %s  [%.1f кг]" % [display_name, mass]
+     if item_id == &"mug" and bool(get_meta("coffee_ready", false)):
+         return "ЛКМ — ВЗЯТЬ ГОРЯЧИЙ КОФЕ  •  ПОТОМ E — ВЫПИТЬ"
+diff --git a/scripts/interactions/simple_action.gd b/scripts/interactions/simple_action.gd
+index 1e0243a..1037de0 100644
+--- a/scripts/interactions/simple_action.gd
++++ b/scripts/interactions/simple_action.gd
+@@ -90,14 +90,18 @@ func interact(actor, mode: int) -> String:
+         return "СНАЧАЛА ПОРУЧЕНИЕ РИТЫ: %s" % RitaDemands.get_objective()
+     if action_type == "water":
+         return _toggle_water()
++    # §2 миссии: старые автоматические зоны ОТКЛЮЧЕНЫ — жидкость начисляется
++    # только через физический PourController (никакого двойного учёта).
+     if action_type == "brew":
+-        return await _brew_interaction(actor, mode)
++        return "ВАРКА ОТКЛЮЧЕНА  •  НАЛИВАЙ ФИЗИЧЕСКИ: ВОЗЬМИ ЧАЙНИК И НАЖМИ ЛКМ НАД КРУЖКОЙ"
+     if action_type == "coffee_powder_pour":
++        # Физическое насыпание не входит в этот срез: сохраняем старую
++        # компактную зону только для порошка.
+         return await _coffee_powder_pour_interaction()
+     if action_type == "water_pour":
+-        return await _water_pour_interaction(mode)
++        return "НАЛИВ ЧЕРЕЗ ЗОНУ ОТКЛЮЧЁН  •  ВОЗЬМИ ЧАЙНИК И НАЖМИ ЛКМ НАД КРУЖКОЙ"
+     if action_type == "milk_pour":
+-        return await _milk_pour_interaction(mode)
++        return "НАЛИВ ЧЕРЕЗ ЗОНУ ОТКЛЮЧЁН  •  ОТКРОЙ ПАКЕТ И НАЛЕЙ НАД КРУЖКОЙ (ЛКМ)"
+     var demand_location := _demand_location()
+     if demand_location == &"":
+         return await super.interact(actor, mode)
+@@ -432,12 +436,9 @@ func _place_pour_stream(kettle: Node3D, mug: Node3D) -> void:
+ 
+ func perform_interaction(actor, _mode: int) -> String:
+     match action_type:
+-        "coffee_powder_pour":
+-            return QuestManager.pour_coffee_powder()
+-        "water_pour":
+-            return QuestManager.pour_water_into_mug()
+-        "milk_pour":
+-            return QuestManager.pour_milk_into_mug()
++        "coffee_powder_pour", "water_pour", "milk_pour":
++            # §2 миссии: начисление жидкости через зоны запрещено
++            return "АВТОНАЛИВ ОТКЛЮЧЁН  •  ИСПОЛЬЗУЙ ФИЗИЧЕСКИЙ РОЗЛИВ (ЛКМ)"
+         "slippers":
+             if actor.has_method("equip_slippers"):
+                 actor.equip_slippers()
+diff --git a/scripts/liquid/liquid_receiver.gd b/scripts/liquid/liquid_receiver.gd
+index a24b933..bb69076 100644
+--- a/scripts/liquid/liquid_receiver.gd
++++ b/scripts/liquid/liquid_receiver.gd
+@@ -1,47 +1,59 @@
+ # LiquidReceiver.gd
+-# Area3D, размещается на отверстии кружки.
++# Area3D, размещается на отверстии кружки (MugOpeningArea — §9 миссии).
++# Радиус 0.040-0.045 м, принимает жидкость только сверху.
+ # Детектирует попадание струи и передаёт жидкость в MugContentController.
+ class_name LiquidReceiver
+ extends Area3D
+ 
+-## Ссылка на MugContentController (родитель или сосед)
++## Ссылка на MugContentController
+ @export var mug_content_controller_path: NodePath = NodePath()
+ 
+-## Радиус детекции (должен совпадать с отверстием кружки)
+-@export var detection_radius: float = 0.04
++## Радиус отверстия (м) — §9 миссии: 0.040-0.045
++@export var detection_radius: float = 0.042
+ 
+-## При попадании струи
+-signal liquid_received(amount_ml: float, defn: LiquidDefinition)
++## Высота зоны приёма (м) — §9: 0.015-0.025
++@export var detection_height: float = 0.020
+ 
+-var _mug_controller = null
++var _mug_controller: Node = null
++
++signal liquid_received(amount_ml: float, definition: LiquidDefinition)
+ 
+ 
+ func _ready():
+-	collision_layer = 0
++	collision_layer = 8
+ 	collision_mask = 0
+-	# Специальный слой для детекции струи
+-	collision_layer = 8  # liquid_receiver layer
+-	
++	monitoring = true
++	monitorable = true
++
++	# Цилиндр приёма — принимает только попадания сверху
++	var shape := CylinderShape3D.new()
++	shape.radius = detection_radius
++	shape.height = detection_height
++	var col := CollisionShape3D.new()
++	col.shape = shape
++	add_child(col)
++
+ 	if mug_content_controller_path:
+-		_mug_controller = get_node(mug_content_controller_path)
+-	
+-	# Создаём CollisionShape3D для детекции
+-	var shape := CollisionShape3D.new()
+-	var sphere := SphereShape3D.new()
+-	sphere.radius = detection_radius
+-	shape.shape = sphere
+-	add_child(shape)
+-	
+-	area_entered.connect(_on_area_entered)
+-
+-
+-## Вызывается из PourController при попадании струи.
+-func on_liquid_hit(amount_ml: float, defn: LiquidDefinition) -> void:
+-	liquid_received.emit(amount_ml, defn)
+-	if _mug_controller and _mug_controller.has_method("add_liquid"):
+-		_mug_controller.call("add_liquid", amount_ml, defn)
+-
+-
+-func _on_area_entered(area: Area3D):
+-	# Для будущей детекции области струи
+-	pass
++		_mug_controller = get_node_or_null(mug_content_controller_path)
++	if _mug_controller == null:
++		_mug_controller = get_parent().get_node_or_null("MugContentController")
++	if _mug_controller == null:
++		push_error("LiquidReceiver: MugContentController НЕ НАЙДЕН — жидкость некуда принимать!")
++
++
++## Вызывается PourController при попадании струи (§8 миссии).
++## Принимает жидкость только если струя идёт сверху (§9 миссии).
++func on_liquid_hit(amount_ml: float, defn: LiquidDefinition, source_temp_c: float = 20.0) -> float:
++	if _mug_controller == null:
++		return 0.0
++	if not _mug_controller.has_method("add_liquid"):
++		return 0.0
++	var accepted: float = _mug_controller.call("add_liquid", amount_ml, defn, source_temp_c)
++	if accepted > 0.0:
++		liquid_received.emit(accepted, defn)
++	return accepted
++
++
++## Есть ли контроллер содержимого.
++func is_ready() -> bool:
++	return _mug_controller != null
+diff --git a/scripts/liquid/pour_controller.gd b/scripts/liquid/pour_controller.gd
+index f26c5d5..33639fd 100644
+--- a/scripts/liquid/pour_controller.gd
++++ b/scripts/liquid/pour_controller.gd
+@@ -1,232 +1,275 @@
+ # PourController.gd
+-# Управляет режимом наливания: наклон, тремор, струя, детекция попадания.
+-# Создаётся динамически в player_controller при входе в режим налива.
++# Управляет процессом наливания жидкости из контейнера (чайник/пакет молока).
++# §7 миссии: ЛКМ — наклон, отпускание — стоп, ПКМ — стабилизация.
++# §8 миссии: ЕДИНАЯ баллистическая траектория (визуал == физика).
++# §3 миссии: закон сохранения — removed = accepted + spilled (±1-2 мл).
+ class_name PourController
+ extends Node
+ 
+-## Ссылка на предмет, который держит игрок (чайник/молоко)
+-var source_item: RigidBody3D = null
++## Сигнал: наливание началось
++signal pour_started()
+ 
+-## Ссылка на physical_item.gd
+-var source_physical: Node = null
++## Сигнал: наливание закончилось (hit_ml, spilled_ml, liquid_id)
++signal pour_finished(hit_ml: float, spilled_ml: float, liquid_id: String)
+ 
+-## Ссылка на ContainerVolume источника
+-var source_volume: ContainerVolume = null
+-
+-## Текущий угол наклона (0-80 градусов)
+-var tilt_angle: float = 0.0
+-
+-## Целевой угол наклона (плавное изменение)
+-var target_tilt: float = 0.0
+-
+-## Интенсивность дрожания (рад)
+-var tremble: float = 0.0
+-
+-## Флаг: активен ли режим наливания
+-var is_pouring: bool = false
+-
+-## Количество пролитой жидкости (мл) за текущую сессию
+-var spilled_ml: float = 0.0
+-
+-## Количество попавшей в кружку жидкости (мл)
+-var hit_ml: float = 0.0
++## Сигнал: жидкость попала в приёмник
++signal liquid_hit(amount_ml: float, receiver: Node)
+ 
+-## ID жидкости (water/milk) — для передачи в RunStats.record_pour_stats
+-var liquid_id: String = ""
++## Сигнал: жидкость пролилась мимо
++signal liquid_spilled(amount_ml: float, position: Vector3)
+ 
+-## Флаг: был ли уже тригерирован квест (чтобы не вызывать много раз)
+-var _quest_triggered: bool = false
+-
+-## Пороговый объём для срабатывания квеста (мл)
+-const QUEST_TRIGGER_THRESHOLD: float = 50.0
+ 
+-## Скорость наклона (град/сек)
++# --- Параметры наклона (§7 миссии) ---
++## Скорость наклона (град/с) при зажатой ЛКМ
+ const TILT_SPEED: float = 120.0
+-
+-## Скорость возврата (град/сек)
++## Скорость возврата в вертикаль (град/с)
+ const RETURN_SPEED: float = 200.0
++## Максимальный угол наклона
++const MAX_TILT: float = 80.0
++## Порог срабатывания квеста (мл)
++const QUEST_TRIGGER_ML: float = 50.0
++## Маска столкновений струи: слой 1 (статика/пол) + слой 8 (приёмники жидкости)
++const STREAM_MASK: int = 1 | 8
+ 
+-## Макс дистанция до кружки для детекции
+-const MAX_POUR_DISTANCE: float = 0.8
+ 
+-## Ссылка на StreamRenderer (создаётся автоматически)
+-var _stream: StreamRenderer = null
++var tilt_angle: float = 0.0
++var target_tilt: float = 0.0
+ 
+-## Cached mug reference
+-var _target_mug: Node = null
++var source_item: Node = null
++var source_volume: ContainerVolume = null
++var liquid_def: LiquidDefinition = null
+ 
+-## Была ли стабилизация (ПКМ) в прошлом кадре
++var hit_ml: float = 0.0
++var spilled_ml: float = 0.0
++var _pouring: bool = false
+ var _stabilizing: bool = false
++var _quest_triggered: bool = false
++
++var _stream: MeshInstance3D = null
++const STREAM_RENDERER_SCRIPT := preload("res://scripts/liquid/stream_renderer.gd")
+ 
+ 
+ func _ready():
+-	_stream = StreamRenderer.new()
+-	add_child(_stream)
++	_stream = STREAM_RENDERER_SCRIPT.new()
+ 	_stream.name = "StreamRenderer"
++	add_child(_stream)
++	# Точки траектории хранятся в мировых координатах; визуал не должен
++	# повторно наследовать transform игрока.
++	_stream.top_level = true
++
++
++## Начать наливание из указанного предмета.
++## Возвращает false, если лить нечего.
++func start_pouring(item_node: Node) -> bool:
++	source_item = item_node
++	source_volume = null
++	if item_node and item_node.has_method("get_container_volume"):
++		source_volume = item_node.call("get_container_volume")
++	elif item_node:
++		source_volume = item_node.get_node_or_null("ContainerVolume") as ContainerVolume
++
++	if source_volume == null or source_volume.is_empty():
++		push_warning("PourController: нет жидкости для розлива")
++		queue_free()
++		return false
+ 
+-
+-## Начать наливание. Вызывается из player_controller.
+-func start_pouring(physical_item_node: Node) -> void:
+-	source_physical = physical_item_node
+-	source_item = physical_item_node as RigidBody3D
+-	
+-	if physical_item_node.has_method("get_container_volume"):
+-		source_volume = physical_item_node.get_container_volume()
+-	
+-	if not source_volume or source_volume.is_empty():
++	liquid_def = source_volume.liquid
++	if liquid_def == null:
++		push_warning("PourController: у контейнера нет LiquidDefinition")
+ 		queue_free()
+-		return
+-	
+-	is_pouring = true
+-	tilt_angle = 0.0
+-	target_tilt = 0.0
+-	spilled_ml = 0.0
++		return false
++
++	_pouring = true
+ 	hit_ml = 0.0
+-	
+-	_stream.set_visible(true)
+-	_stream.liquid_color = source_volume.liquid.color if source_volume.liquid else Color.WHITE
+-	
+-	# Определяем ID жидкости
+-	liquid_id = source_volume.liquid.id if source_volume and source_volume.liquid else ""
+-	
+-	# Сбрасываем флаг квеста
++	spilled_ml = 0.0
+ 	_quest_triggered = false
+-
+-
+-## Прервать наливание.
+-func stop_pouring() -> void:
+-	is_pouring = false
+-	target_tilt = 0.0
+-	_stream.set_visible(false)
++	if _stream and _stream.has_method("set_stream_color"):
++		_stream.set_stream_color(liquid_def.color)
++	pour_started.emit()
++	return true
++
++
++## Остановить наливание и вернуть статистику.
++func stop_pouring() -> Dictionary:
++	_pouring = false
++	if _stream:
++		_stream.update_stream(Vector3.ZERO, Vector3.DOWN, 0.0, 0.0)
++	var lid: String = liquid_def.id if liquid_def else ""
++	pour_finished.emit(hit_ml, spilled_ml, lid)
++	return {
++		"hit_ml": hit_ml,
++		"spilled_ml": spilled_ml,
++		"liquid_id": lid,
++	}
+ 
+ 
+ func _process(delta: float):
+-	if not is_pouring or not source_item or not is_instance_valid(source_item):
++	if not _pouring or source_volume == null or liquid_def == null:
+ 		return
+-	
+-	# Плавное изменение угла наклона
+-	tilt_angle = move_toward(tilt_angle, target_tilt, (TILT_SPEED if target_tilt > tilt_angle else RETURN_SPEED) * delta)
+-	tilt_angle = clampf(tilt_angle, 0.0, 80.0)
+-	
+-	# Тремор
+-	_update_tremble(delta)
+-	
+-	# Отрисовка струи
+-	var liquid_def = source_volume.liquid if source_volume else null
+-	var flow_rate: float = 0.0
+-	var should_pour: bool = false
+-	
+-	if liquid_def and tilt_angle >= liquid_def.pour_start_angle:
+-		should_pour = true
+-		flow_rate = liquid_def.get_flow_rate(tilt_angle)
+-		
+-		# Снимаем жидкость с источника
+-		var removed: float = source_volume.remove_liquid(flow_rate * delta)
+-		if removed <= 0.0:
+-			should_pour = false
+-	
+-	if should_pour and source_item.has_method("get_pour_origin_global_position"):
+-		var origin: Vector3 = source_item.call("get_pour_origin_global_position")
+-		var direction: Vector3 = source_item.call("get_pour_direction_global")
+-		
+-		# Добавляем тремор к позиции
+-		var tremble_offset := Vector3(
+-			randf_range(-tremble, tremble),
+-			randf_range(-tremble, tremble),
+-			randf_range(-tremble, tremble)
+-		)
+-		origin += tremble_offset * 0.05
+-		
+-		# Обновляем струю
+-		var stream_width: float = liquid_def.get_stream_width(flow_rate) if liquid_def else 0.015
+-		_stream.update_stream(origin, direction, flow_rate, delta, stream_width)
+-		
+-		# Детекция попадания
+-		_check_hit(origin, direction, flow_rate * delta)
+-	else:
+-		_stream.set_visible(false)
+-		if source_volume and source_volume.is_empty():
+-			stop_pouring()
+-
+-
+-func _update_tremble(delta: float):
+-	# Базовая интенсивность
+-	tremble = 0.01
+-	
+-	# Если игрок бежит — больше дрожи
+-	if source_item and source_item.has_method("is_moving"):
+-		tremble += 0.03
+-	
+-	# Стабилизация ПКМ
+-	if _stabilizing:
+-		tremble *= 0.3
+-	
+-	# Случайное колебание
+-	tremble += randf_range(-0.005, 0.005) * delta * 10.0
+-	tremble = maxf(0.0, tremble)
+-
+-
+-func _check_hit(origin: Vector3, direction: Vector3, volume_this_frame: float):
+-	if volume_this_frame <= 0.0:
+-		return
+-	
+-	# Рейкаст от носика вниз по направлению струи
+-	var world := get_tree().root.world_3d
+-	if world == null:
++	if source_item == null or not is_instance_valid(source_item):
++		stop_pouring()
+ 		return
+-	var space_state: PhysicsDirectSpaceState3D = world.direct_space_state
+-	var end_point: Vector3 = origin + direction * MAX_POUR_DISTANCE
+-	
+-	var query := PhysicsRayQueryParameters3D.create(origin, end_point)
+-	query.collide_with_areas = true
+-	query.collision_mask = 8  # liquid_receiver layer
+-	
+-	var result: Dictionary = space_state.intersect_ray(query)
+-	
+-	if result.is_empty():
+-		# Промах — разлив
+-		spilled_ml += volume_this_frame
+-		_spawn_spill_at(end_point)
++
++	# --- Наклон (§7) ---
++	var stab_mult: float = 0.35 if _stabilizing else 1.0
++	if target_tilt > tilt_angle:
++		tilt_angle = minf(tilt_angle + TILT_SPEED * stab_mult * delta, target_tilt)
++	elif target_tilt < tilt_angle:
++		tilt_angle = maxf(tilt_angle - RETURN_SPEED * delta, target_tilt)
++	tilt_angle = clampf(tilt_angle, 0.0, MAX_TILT)
++
++	# --- Поток по углу (§7) ---
++	var flow_rate: float = liquid_def.get_flow_rate(tilt_angle)
++	if flow_rate <= 0.0:
++		_stream.update_stream(Vector3.ZERO, Vector3.DOWN, 0.0, 0.0)
+ 		return
+-	
+-	var collider = result.get("collider")
+-	if collider and collider.has_method("on_liquid_hit"):
+-		# Попадание в кружку
+-		hit_ml += volume_this_frame
+-		collider.call("on_liquid_hit", volume_this_frame, source_volume.liquid if source_volume else null)
+-		
+-		# Тригерим квест-менеджер при первом достаточном попадании
+-		if not _quest_triggered and hit_ml >= QUEST_TRIGGER_THRESHOLD:
+-			_quest_triggered = true
+-			_trigger_quest()
+-	else:
+-		spilled_ml += volume_this_frame
+ 
++	# Истончение струи у пустого контейнера (§7 миссии)
++	var flow_fraction: float = clampf(source_volume.current_ml / 120.0, 0.15, 1.0)
++	flow_rate *= flow_fraction
+ 
+-## Уведомить QuestManager о ручном розливе.
+-func _trigger_quest() -> void:
+-	if not is_inside_tree():
++	# --- Забираем жидкость из источника (закон сохранения §3) ---
++	var removed: float = source_volume.remove_liquid(flow_rate * delta)
++	if removed <= 0.0:
++		_stream.update_stream(Vector3.ZERO, Vector3.DOWN, 0.0, 0.0)
++		return
++
++	# --- Траектория (§8: та же, что рисует StreamRenderer) ---
++	var origin: Vector3 = _get_pour_origin()
++	var direction: Vector3 = _get_pour_direction()
++	var width: float = liquid_def.get_stream_width(flow_rate) * flow_fraction
++	_stream.update_stream(origin, direction, flow_rate, width, flow_fraction)
++
++	# --- Физика попадания по тем же точкам ---
++	_check_hit_ballistic(removed)
++
++	# Триггер квеста при пороге
++	if not _quest_triggered and hit_ml >= QUEST_TRIGGER_ML:
++		_quest_triggered = true
++		_trigger_quest()
++
++
++func _get_pour_origin() -> Vector3:
++	if source_item == null:
++		return Vector3.ZERO
++	if source_item.has_method("get_pour_origin_global_position"):
++		var value: Variant = source_item.call("get_pour_origin_global_position")
++		if value is Vector3:
++			return value
++	if source_item is Node3D:
++		return (source_item as Node3D).global_position
++	return Vector3.ZERO
++
++
++func _get_pour_direction() -> Vector3:
++	var direction := Vector3.FORWARD
++	if source_item and source_item.has_method("get_pour_direction_global"):
++		var value: Variant = source_item.call("get_pour_direction_global")
++		if value is Vector3:
++			direction = value
++	elif source_item is Node3D:
++		direction = -(source_item as Node3D).global_transform.basis.z
++	if direction.is_zero_approx():
++		return Vector3.FORWARD
++	return direction.normalized()
++
++
++## Проверка попадания по баллистическим сегментам (§8 миссии).
++## Лучи: collide_with_areas + collide_with_bodies, исключены источник и игрок.
++func _check_hit_ballistic(volume_this_frame: float):
++	var world = get_tree().root.world_3d
++	if world == null:
+ 		return
+-	var quest := get_tree().get_first_node_in_group("quest_manager") as Node
+-	if quest == null:
+-		quest = get_tree().root.get_node_or_null("QuestManager")
+-	if quest == null:
++	var space_state = world.direct_space_state
++	var points: PackedVector3Array = _stream.last_trajectory
++	if points.size() < 2:
+ 		return
+-	
+-	if liquid_id == "water":
+-		if quest.has_method("manual_pour_water"):
+-			quest.call("manual_pour_water")
+-	elif liquid_id == "milk":
+-		if quest.has_method("manual_pour_milk"):
+-			quest.call("manual_pour_milk")
+ 
++	# Исключения: сам источник + игрок
++	var exclude: Array[RID] = []
++	if source_item is CollisionObject3D:
++		exclude.append(source_item.get_rid())
++	var player := get_tree().get_first_node_in_group("player")
++	if player is CollisionObject3D:
++		exclude.append(player.get_rid())
++
++	# Идём по сегментам траектории — первое попадание решает судьбу порции
++	for i in range(points.size() - 1):
++		var from: Vector3 = points[i]
++		var to: Vector3 = points[i + 1]
++		var query := PhysicsRayQueryParameters3D.create(from, to, STREAM_MASK, exclude)
++		query.collide_with_areas = true
++		query.collide_with_bodies = true
++		var result: Dictionary = space_state.intersect_ray(query)
++		if result.is_empty():
++			continue
++
++		var collider: Object = result.get("collider")
++		var hit_pos: Vector3 = result.get("position", to)
++
++		# Приёмник жидкости (кружка) — Area3D с on_liquid_hit
++		if collider and collider.has_method("on_liquid_hit"):
++			# Отверстие принимает только нисходящую струю сверху.
++			var segment_direction := (to - from).normalized()
++			if segment_direction.dot(Vector3.DOWN) < 0.20:
++				spilled_ml += volume_this_frame
++				liquid_spilled.emit(volume_this_frame, hit_pos)
++				_spawn_spill_at(hit_pos, volume_this_frame)
++				return
++			var temp_c: float = _get_source_temperature()
++			var accepted_value: Variant = collider.call("on_liquid_hit", volume_this_frame, liquid_def, temp_c)
++			var accepted := clampf(float(accepted_value), 0.0, volume_this_frame)
++			var overflow := volume_this_frame - accepted
++			hit_ml += accepted
++			spilled_ml += overflow
++			if accepted > 0.0:
++				liquid_hit.emit(accepted, collider)
++			return
++
++		# Любое другое тело — пролив в точке попадания (§11 миссии)
++		spilled_ml += volume_this_frame
++		liquid_spilled.emit(volume_this_frame, hit_pos)
++		_spawn_spill_at(hit_pos, volume_this_frame)
++		return
+ 
+-func _spawn_spill_at(position: Vector3):
+-	# Создаём временную каплю/лужу
+-	var spill_manager = get_tree().get_first_node_in_group("spill_manager")
+-	if spill_manager and spill_manager.has_method("spawn_spill"):
+-		spill_manager.call("spawn_spill", position, source_volume.liquid.color if source_volume and source_volume.liquid else Color.WHITE)
++	# Ничего не задели — струя падает в конечную точку (пол/стол)
++	var end_point: Vector3 = points[points.size() - 1]
++	# Луч вниз из конца дуги, чтобы найти поверхность
++	var down_query := PhysicsRayQueryParameters3D.create(end_point, end_point + Vector3(0, -1.2, 0), 1, exclude)
++	down_query.collide_with_areas = false
++	down_query.collide_with_bodies = true
++	var down_result: Dictionary = space_state.intersect_ray(down_query)
++	if not down_result.is_empty():
++		end_point = down_result.get("position", end_point)
++	spilled_ml += volume_this_frame
++	liquid_spilled.emit(volume_this_frame, end_point)
++	_spawn_spill_at(end_point, volume_this_frame)
++
++
++func _get_source_temperature() -> float:
++	# Температура чайника (если есть KettleStateMachine)
++	if source_item:
++		var ksm := source_item.get_node_or_null("KettleStateMachine")
++		if ksm and "temperature_c" in ksm:
++			return float(ksm.temperature_c)
++	return 20.0
++
++
++func _trigger_quest():
++	if liquid_def == null:
++		return
++	match liquid_def.id:
++		"water":
++			QuestManager.manual_pour_water()
++		"milk":
++			QuestManager.manual_pour_milk()
+ 
+ 
+-func get_container_volume():
+-	return source_volume
++func _spawn_spill_at(position: Vector3, amount_ml: float):
++	var spill_manager = get_tree().get_first_node_in_group("spill_manager")
++	if spill_manager and spill_manager.has_method("spawn_spill_typed"):
++		var lid: String = liquid_def.id if liquid_def else "water"
++		spill_manager.call("spawn_spill_typed", position, lid, amount_ml)
++	elif spill_manager and spill_manager.has_method("spawn_spill"):
++		var col: Color = liquid_def.color if liquid_def else Color.WHITE
++		spill_manager.call("spawn_spill", position, col)
+diff --git a/scripts/liquid/spill_cluster.gd b/scripts/liquid/spill_cluster.gd
+index 69840c3..fd95ff6 100644
+--- a/scripts/liquid/spill_cluster.gd
++++ b/scripts/liquid/spill_cluster.gd
+@@ -1,11 +1,15 @@
+ # SpillCluster.gd
+-# Визуальное пятно (лужа) на поверхности после разлива жидкости.
++# Визуальное пятно (лужа) на поверхности после разлива жидкости (§11 миссии).
++# Типизированное: вода/молоко/кофе/порошок имеют разный вид.
+ class_name SpillCluster
+ extends MeshInstance3D
+ 
+ ## Цвет жидкости
+ var liquid_color: Color = Color.WHITE
+ 
++## Тип жидкости ("water" | "milk" | "coffee_mix" | "coffee_powder")
++var liquid_type: String = "water"
++
+ ## Радиус лужи
+ var radius: float = 0.05
+ 
+@@ -13,39 +17,51 @@ var radius: float = 0.05
+ @export var lifetime: float = 120.0
+ 
+ var _age: float = 0.0
++var _mat: StandardMaterial3D = null
+ 
+ 
+ func _ready():
+-	create_mesh()
+ 	add_to_group("spills")
++	create_mesh()
+ 
+ 
+ func create_mesh():
+-	var sm := SphereMesh.new()
+-	sm.radius = radius
+-	sm.height = radius * 0.2  # сплюснутая сфера
+-	sm.radial_segments = 8
+-	sm.rings = 4
+-	mesh = sm
+-	
+-	var mat := StandardMaterial3D.new()
+-	mat.flags_transparent = true
+-	mat.albedo_color = Color(liquid_color.r, liquid_color.g, liquid_color.b, 0.6)
+-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+-	material_override = mat
+-	
+-	# Поворачиваем, чтобы лежала на поверхности
+-	rotation.x = deg_to_rad(-90.0)
++	# Плоский круг (CylinderMesh с нулевой высотой) — лежит на поверхности без z-fighting
++	var cm := CylinderMesh.new()
++	cm.top_radius = radius
++	cm.bottom_radius = radius
++	cm.height = 0.002
++	cm.radial_segments = 16
++	mesh = cm
++
++	_mat = StandardMaterial3D.new()
++	_mat.flags_transparent = true
++	_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
++	# Порошок — матовый и почти непрозрачный; жидкости — глянец
++	if liquid_type == "coffee_powder":
++		_mat.albedo_color = Color(liquid_color.r, liquid_color.g, liquid_color.b, 0.95)
++	else:
++		_mat.albedo_color = Color(liquid_color.r, liquid_color.g, liquid_color.b, liquid_color.a)
++		_mat.metallic = 0.3
++		_mat.roughness = 0.15
++	material_override = _mat
++	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
++
++
++## Увеличить лужу при повторном попадании (слияние §11 миссии).
++func grow(amount: float) -> void:
++	radius = clampf(radius + amount, 0.04, 0.25)
++	create_mesh()
++
+ 
+ func _process(delta: float):
+ 	if lifetime > 0:
+ 		_age += delta
+ 		if _age >= lifetime:
+-			# Медленно исчезаем
+ 			var fade: float = 1.0 - ((_age - lifetime) / 5.0)
+ 			if fade <= 0.0:
+ 				queue_free()
+-			elif material_override:
+-				var c: Color = material_override.albedo_color
+-				c.a = clampf(fade * 0.6, 0.0, 0.6)
+-				material_override.albedo_color = c
++			elif _mat:
++				var c: Color = _mat.albedo_color
++				c.a = clampf(fade * 0.6, 0.0, 0.95)
++				_mat.albedo_color = c
+diff --git a/scripts/liquid/spill_manager.gd b/scripts/liquid/spill_manager.gd
+index fd7a737..f48ef6d 100644
+--- a/scripts/liquid/spill_manager.gd
++++ b/scripts/liquid/spill_manager.gd
+@@ -1,48 +1,112 @@
+ # SpillManager.gd
+-# Управляет лужами на поверхностях.
+-# Создаёт SpillCluster при разливе, объединяет близкие лужи.
++# Управляет лужами на поверхностях (§11 миссии).
++# Типизированные проливы: WATER/MILK/COFFEE_MIX/COFFEE_POWDER.
++# Создаёт SpillCluster при разливе, объединяет близкие лужи (не более merge_radius),
++# пулит до max_spills — старые удаляются (§23 миссии: производительность).
+ class_name SpillManager
+ extends Node
+ 
+-## Максимальное количество луж
++## Максимум одновременных луж (§23 миссии)
+ @export var max_spills: int = 20
+ 
+-## Радиус объединения близких луж
++## Радиус объединения луж (м)
+ @export var merge_radius: float = 0.3
+ 
++## Цвета по типу жидкости (§11 миссии)
++const TYPE_COLORS := {
++	"water": Color(0.55, 0.75, 0.95, 0.45),
++	"milk": Color(0.95, 0.95, 0.92, 0.75),
++	"coffee_mix": Color(0.25, 0.13, 0.05, 0.85),
++	"coffee_powder": Color(0.20, 0.11, 0.05, 0.95),
++}
++
++var _spills: Array[Node] = []
++
+ 
+ func _ready():
+ 	add_to_group("spill_manager")
+ 
+ 
+-## Создать лужу в позиции.
+-func spawn_spill(position: Vector3, color: Color):
+-	# Проверка на объединение
+-	var spills = get_tree().get_nodes_in_group("spills")
+-	
+-	# Сначала ищем близкую лужу для объединения
+-	for spill in spills:
+-		if spill is SpillCluster:
+-			var dist := position.distance_to(spill.global_position)
+-			if dist <= merge_radius:
+-				# Увеличиваем существующую лужу
+-				_merge_spill(spill as SpillCluster, position)
+-				return
+-	
+-	# Создаём новую лужу
+-	if spills.size() >= max_spills:
+-		# Удаляем самую старую
+-		var oldest: SpillCluster = spills[0] as SpillCluster
+-		if oldest:
++## Создать типизированную лужу (§11 миссии).
++## liquid_type: "water" | "milk" | "coffee_mix" | "coffee_powder"
++## amount_ml — объём (влияет на радиус; 0 = разовая капля потока)
++func spawn_spill_typed(position: Vector3, liquid_type: String, amount_ml: float = 0.0) -> void:
++	var color: Color = TYPE_COLORS.get(liquid_type, TYPE_COLORS["water"])
++	# Порошок — рассыпчатое пятно, не растекается
++	var grow: float = 0.02 if liquid_type == "coffee_powder" else (0.015 + amount_ml * 0.0004)
++	_spawn_or_merge(position, color, grow, liquid_type)
++
++
++## Обратная совместимость (старый API — цвет).
++func spawn_spill(position: Vector3, color: Color) -> void:
++	_spawn_or_merge(position, color, 0.015, "water")
++
++
++func _spawn_or_merge(position: Vector3, color: Color, grow_amount: float, liquid_type: String) -> void:
++	# Поднимаем чуть над поверхностью — без z-fighting (§11 миссии)
++	var spawn_pos: Vector3 = position + Vector3(0, 0.004, 0)
++
++	# Проверка на объединение с ближайшей лужей
++	var nearest: Node = null
++	var nearest_dist: float = merge_radius
++	for spill in _spills:
++		if not is_instance_valid(spill):
++			continue
++		var dist: float = spill.global_position.distance_to(spawn_pos)
++		if dist < nearest_dist:
++			nearest = spill
++			nearest_dist = dist
++
++	if nearest:
++		nearest.call("grow", grow_amount)
++		return
++
++	# Пул: удаляем самую старую при переполнении (§23 миссии)
++	_cleanup_invalid()
++	if _spills.size() >= max_spills:
++		var oldest: Node = _spills.pop_front()
++		if is_instance_valid(oldest):
+ 			oldest.queue_free()
+-	
++
+ 	var cluster := SpillCluster.new()
+ 	cluster.liquid_color = color
+-	cluster.radius = randf_range(0.03, 0.08)
+-	cluster.global_position = position + Vector3(0.0, 0.005, 0.0)
+-	get_tree().current_scene.add_child(cluster)
++	cluster.liquid_type = liquid_type
++	cluster.radius = clampf(0.04 + grow_amount, 0.04, 0.25)
++	# Добавляем в корень сцены, чтобы лужа не зависела от источника
++	var scene := get_tree().current_scene
++	if scene:
++		scene.add_child(cluster)
++	else:
++		add_child(cluster)
++	cluster.global_position = spawn_pos
++	_spills.append(cluster)
++
++
++func _cleanup_invalid() -> void:
++	for i in range(_spills.size() - 1, -1, -1):
++		if not is_instance_valid(_spills[i]):
++			_spills.remove_at(i)
++
++
++## Общий объём всех луж (для статистики/уборки §12).
++func get_total_spill_count() -> int:
++	_cleanup_invalid()
++	return _spills.size()
+ 
+ 
+-func _merge_spill(existing: SpillCluster, new_pos: Vector3):
+-	existing.radius = minf(existing.radius + 0.02, 0.25)
+-	existing.create_mesh()
++## Убрать ближайшую лужу (для полотенца §12). Возвращает радиус убранной.
++func absorb_nearest(position: Vector3, max_dist: float) -> float:
++	_cleanup_invalid()
++	var nearest: Node = null
++	var nearest_dist: float = max_dist
++	for spill in _spills:
++		var dist: float = spill.global_position.distance_to(position)
++		if dist < nearest_dist:
++			nearest = spill
++			nearest_dist = dist
++	if nearest == null:
++		return 0.0
++	var absorbed: float = float(nearest.get("radius"))
++	_spills.erase(nearest)
++	nearest.queue_free()
++	return absorbed
+diff --git a/scripts/liquid/stream_renderer.gd b/scripts/liquid/stream_renderer.gd
+index f55086a..b315720 100644
+--- a/scripts/liquid/stream_renderer.gd
++++ b/scripts/liquid/stream_renderer.gd
+@@ -1,88 +1,98 @@
+ # StreamRenderer.gd
+-# Процедурная отрисовка струи жидкости.
+-# Использует ImmediateMesh для создания баллистической дуги.
+-class_name StreamRenderer
++# Визуализирует струю жидкости как баллистическую ленту (ImmediateMesh).
++# §8 миссии: ЕДИНАЯ баллистическая траектория для визуала и физики.
++# PourController запрашивает точки через compute_trajectory_points().
+ extends MeshInstance3D
+ 
+-## Количество сегментов струи
++## Число сегментов струи (§8: 12-16)
+ @export var segments: int = 14
+ 
+-## Гравитация для струи
+-@export var gravity: Vector3 = Vector3(0.0, -7.5, 0.0)
++## Гравитация струи (м/с²)
++@export var gravity: Vector3 = Vector3(0, -7.5, 0)
+ 
+-## Базовая скорость частиц струи (м/с)
++## Базовая скорость вылета (м/с) при макс. потоке
+ @export var base_velocity: float = 1.8
+ 
+-## Цвет жидкости
+-var liquid_color: Color = Color(0.6, 0.75, 0.9, 0.7)
++## Шаг по времени между сегментами (с)
++@export var time_step: float = 0.035
+ 
+-## Текущая ширина струи
+-var current_width: float = 0.015
++var _mesh: ImmediateMesh
++var _material: StandardMaterial3D
++var _stream_color: Color = Color(0.7, 0.85, 1.0, 0.75)
+ 
+-var _mesh_ready: bool = false
+-var _immediate: ImmediateMesh = null
++## Последняя вычисленная траектория (мировые координаты) — кэш для физики
++var last_trajectory: PackedVector3Array = PackedVector3Array()
+ 
+ 
+ func _ready():
+-	_immediate = ImmediateMesh.new()
+-	mesh = _immediate
++	_mesh = ImmediateMesh.new()
++	mesh = _mesh
++
++	_material = StandardMaterial3D.new()
++	_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
++	_material.flags_transparent = true
++	_material.vertex_color_use_as_albedo = true
++	_material.flags_no_depth_test = true
++	material_override = _material
++
+ 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+-	set_visible(false)
+-	
+-	# Материал
+-	var mat := StandardMaterial3D.new()
+-	mat.flags_transparent = true
+-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+-	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+-	mat.no_depth_test = true
+-	material_override = mat
+-
+-
+-## Обновить струю.
+-func update_stream(origin: Vector3, direction: Vector3, flow_rate: float, delta: float, width: float):
+-	if not _immediate:
++	visible = false
++
++
++## Вычислить баллистические точки траектории (мировые координаты).
++## Используется И визуалом, И физикой попадания (§8 миссии).
++## flow_fraction (0..1) масштабирует скорость вылета — тонкая струя у пустого чайника.
++func compute_trajectory_points(origin: Vector3, direction: Vector3, flow_fraction: float = 1.0) -> PackedVector3Array:
++	var pts := PackedVector3Array()
++	pts.resize(segments + 1)
++	var speed: float = base_velocity * lerpf(0.55, 1.0, clampf(flow_fraction, 0.0, 1.0))
++	var vel: Vector3 = direction.normalized() * speed
++	for i in range(segments + 1):
++		var t: float = float(i) * time_step
++		pts[i] = origin + vel * t + 0.5 * gravity * t * t
++	return pts
++
++
++## Обновить струю. flow_rate_ml_s — текущий поток (0 = скрыть).
++## width — толщина струи в метрах.
++func update_stream(origin: Vector3, direction: Vector3, flow_rate_ml_s: float, width: float, flow_fraction: float = 1.0) -> void:
++	if flow_rate_ml_s <= 0.0:
++		visible = false
++		last_trajectory = PackedVector3Array()
+ 		return
+-	
+-	current_width = width
+-	liquid_color.a = clampf(0.3 + flow_rate / 400.0, 0.2, 0.8)
+-	
+-	_immediate.clear_surfaces()
+-	_immediate.surface_begin(Mesh.PRIMITIVE_TRIANGLE_STRIP)
+-	
+-	var pos: Vector3 = origin
+-	var vel: Vector3 = direction * base_velocity
+-	var step: float = 0.035
+-	var half_width: float = width * 0.5
+-	
+-	for i in range(segments):
+-		# Баллистика
+-		var t: float = i * step
+-		var seg_pos: Vector3 = origin + direction * base_velocity * t + 0.5 * gravity * t * t
+-		
+-		# Вектор "вправо" для ширины струи
+-		var right: Vector3 = direction.cross(Vector3.UP).normalized()
+-		if right.length_squared() < 0.001:
+-			right = Vector3.RIGHT
+-		
+-		var alpha: float = 1.0 - (float(i) / float(segments))
+-		var c: Color = liquid_color
+-		c.a *= alpha
+-		
+-		# Две вершины (левая и правая сторона струи)
+-		var p1: Vector3 = seg_pos - right * half_width
+-		var p2: Vector3 = seg_pos + right * half_width
+-		
+-		var u: float = float(i) / float(segments - 1)
+-		_immediate.surface_set_uv(Vector2(u, 0.0))
+-		_immediate.surface_set_color(c)
+-		_immediate.surface_add_vertex(p1)
+-		
+-		_immediate.surface_set_uv(Vector2(u, 1.0))
+-		_immediate.surface_set_color(c)
+-		_immediate.surface_add_vertex(p2)
+-		
+-		# Уменьшаем ширину к концу
+-		half_width *= 0.97
+-	
+-	_immediate.surface_end()
+-	set_visible(true)
++	visible = true
++	last_trajectory = compute_trajectory_points(origin, direction, flow_fraction)
++
++	_mesh.clear_surfaces()
++	_mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLE_STRIP)
++
++	# Вектор "вбок" для ленты — перпендикуляр направлению в горизонтали
++	var cam_basis_y := Vector3.UP
++	var half_w := width * 0.5
++	for i in range(last_trajectory.size()):
++		var p: Vector3 = last_trajectory[i]
++		# Направление сегмента
++		var seg_dir: Vector3
++		if i < last_trajectory.size() - 1:
++			seg_dir = (last_trajectory[i + 1] - p).normalized()
++		else:
++			seg_dir = (p - last_trajectory[i - 1]).normalized()
++		var side: Vector3 = seg_dir.cross(cam_basis_y).normalized()
++		if side.length_squared() < 0.001:
++			side = Vector3.RIGHT
++		# Сужение к концу + затухание альфы
++		var taper: float = pow(0.97, float(i))
++		var alpha: float = lerpf(0.85, 0.15, float(i) / float(segments))
++		var col := Color(_stream_color.r, _stream_color.g, _stream_color.b, alpha)
++		var w := half_w * taper
++		_mesh.surface_set_color(col)
++		_mesh.surface_add_vertex(p - side * w)
++		_mesh.surface_set_color(col)
++		_mesh.surface_add_vertex(p + side * w)
++
++	_mesh.surface_end()
++
++
++## Установить цвет струи (по жидкости).
++func set_stream_color(color: Color) -> void:
++	_stream_color = color
+diff --git a/scripts/player_controller.gd b/scripts/player_controller.gd
+index 917657c..a4c31fb 100644
+--- a/scripts/player_controller.gd
++++ b/scripts/player_controller.gd
+@@ -58,6 +58,7 @@ var _drink_bottle: RigidBody3D
+ var _drink_return_transform := Transform3D.IDENTITY
+ var _drink_temporary_pickup := false
+ var _drink_kind: StringName = &""
++var _drink_sips_done := 0
+ 
+ func _ready() -> void:
+     collision_layer = 1
+@@ -194,28 +195,29 @@ func _input(event: InputEvent) -> void:
+         get_viewport().set_input_as_handled()
+         return
+ 
+-    if event.is_action_released("pickup") and pushed_body != null:
+-        _stop_pushing()
++    if event.is_action_released("pickup"):
++        if pour_mode_active:
++            _exit_pour_mode()
++        elif pushed_body != null:
++            _stop_pushing()
++        get_viewport().set_input_as_handled()
++        return
++
++    # ПКМ удерживается только для стабилизации во время активного налива.
++    if pour_mode_active and event.is_action_pressed("place"):
++        _pour_stabilize = true
++        get_viewport().set_input_as_handled()
++        return
++    if pour_mode_active and event.is_action_released("place"):
++        _pour_stabilize = false
+         get_viewport().set_input_as_handled()
+         return
+ 
+     if event.is_action_pressed("place"):
+-        if pour_mode_active:
+-            # Выход из режима розлива
+-            _exit_pour_mode()
+-            get_viewport().set_input_as_handled()
+-            return
+         _place_or_drop()
+         get_viewport().set_input_as_handled()
+         return
+ 
+-    # ПКМ стабилизация в режиме розлива
+-    if pour_mode_active:
+-        if event.is_action_pressed("place"):
+-            _pour_stabilize = true
+-        if event.is_action_released("place"):
+-            _pour_stabilize = false
+-
+     if event.is_action_pressed("interact"):
+         _interact_pending = true
+         _interact_fired = false
+@@ -453,19 +455,32 @@ func _can_drink_held_coffee() -> bool:
+         and bool(held_item.get_meta("coffee_ready", false))
+         and QuestManager.coffee_made
+         and not QuestManager.coffee_drunk
++        and _is_mug_at_coffee_zone(held_item)
+     )
+ 
++func _is_mug_at_coffee_zone(mug: Node3D) -> bool:
++    if mug == null:
++        return false
++    for zone in get_tree().get_nodes_in_group("coffee_placement_zone"):
++        if zone is Node3D and mug.global_position.distance_to((zone as Node3D).global_position) <= 0.48:
++            return true
++    return false
++
+ func begin_drink_coffee(mug: RigidBody3D) -> bool:
+     if _drink_active or mug == null or not is_instance_valid(mug) or RitaSleep.is_angry or is_hidden:
+         return false
+-    if held_item != mug or not bool(mug.get_meta("coffee_ready", false)):
++    if (held_item != null and held_item != mug) or not bool(mug.get_meta("coffee_ready", false)):
+         return false
+     _drink_active = true
+     _drink_kind = &"coffee"
+     _drink_elapsed = 0.0
+     _drink_bottle = mug
+-    _drink_temporary_pickup = false
++    _drink_temporary_pickup = held_item == null
+     _drink_return_transform = mug.global_transform
++    if _drink_temporary_pickup:
++        held_item = mug
++        mug.call("on_picked_up")
++    _drink_sips_done = 0
+     _held_rotation_offset = Vector3.ZERO
+     return true
+ 
+@@ -489,6 +504,14 @@ func _update_drink_animation(delta: float) -> void:
+         deg_to_rad(-10.0 * lift)
+     )
+     _drink_bottle.global_rotation = target_rotation
++    if _drink_kind == &"coffee":
++        var target_sips := int(progress >= 0.30) + int(progress >= 0.60) + int(progress >= 0.90)
++        var mug_controller := _drink_bottle.get_node_or_null("MugContentController")
++        while _drink_sips_done < target_sips and mug_controller and mug_controller.has_method("drink_sip"):
++            var remaining: float = mug_controller.call("total_liquid_ml")
++            var sips_left := maxi(1, 3 - _drink_sips_done)
++            mug_controller.call("drink_sip", remaining / float(sips_left))
++            _drink_sips_done += 1
+     if progress >= 1.0:
+         _finish_drink_animation(false, true)
+ 
+@@ -503,6 +526,7 @@ func _finish_drink_animation(drop_in_place := false, completed := false) -> void
+     _drink_elapsed = 0.0
+     _drink_bottle = null
+     _drink_temporary_pickup = false
++    _drink_sips_done = 0
+     if bottle == null or not is_instance_valid(bottle):
+         held_item = null
+         return
+@@ -760,21 +784,22 @@ func _update_held_item(delta: float) -> void:
+     
+     # === Режим розлива (чайник/молоко) ===
+     if pour_mode_active and held_item.has_method("get_pour_grip_global_position"):
+-        var pour_target: Vector3 = held_item.call("get_pour_grip_global_position")
+-        # Сглаженное движение к позиции розлива (правая сторона экрана)
+-        var pour_pos: Vector3 = camera.global_position + camera.global_transform.basis.x * 0.45 \
+-            + (-camera.global_transform.basis.y) * 0.35 \
+-            + (-camera.global_transform.basis.z) * 0.55
+-        held_item.global_position = held_item.global_position.lerp(pour_pos, minf(1.0, delta * 15.0))
+-        # Поворот для розлива (носик вперёд-вниз)
++        # Корпус справа снизу; PourGripPoint совмещается с опорой руки.
++        var grip_anchor: Vector3 = camera.global_position + camera.global_transform.basis.x * 0.48 \
++            - camera.global_transform.basis.y * 0.34 \
++            - camera.global_transform.basis.z * 0.72
++        var live_tilt := pour_controller.tilt_angle if pour_controller != null else 0.0
+         var pour_rot := Vector3(
+             deg_to_rad(-10.0),
+             camera.global_rotation.y + deg_to_rad(15.0),
+-            deg_to_rad(-5.0)
++            deg_to_rad(-5.0 - live_tilt)
+         )
+         held_item.rotation.x = lerp_angle(held_item.rotation.x, pour_rot.x, minf(1.0, delta * 12.0))
+         held_item.rotation.y = lerp_angle(held_item.rotation.y, pour_rot.y, minf(1.0, delta * 12.0))
+         held_item.rotation.z = lerp_angle(held_item.rotation.z, pour_rot.z, minf(1.0, delta * 12.0))
++        var grip_position: Vector3 = held_item.call("get_pour_grip_global_position")
++        var body_target := grip_anchor - (grip_position - held_item.global_position)
++        held_item.global_position = held_item.global_position.lerp(body_target, minf(1.0, delta * 15.0))
+         return
+     
+     # === Обычный режим ношения ===
+@@ -1013,7 +1038,10 @@ func _enter_pour_mode() -> void:
+     # Создаём PourController как child игрока
+     pour_controller = PourController.new()
+     add_child(pour_controller)
+-    pour_controller.start_pouring(held_item)
++    if not pour_controller.start_pouring(held_item):
++        pour_controller = null
++        return
++    pour_controller.target_tilt = pour_controller.MAX_TILT
+     
+     pour_mode_active = true
+     held_item.call("enter_pour_mode")
+@@ -1025,6 +1053,7 @@ func _exit_pour_mode() -> void:
+         return
+     
+     if pour_controller != null and is_instance_valid(pour_controller):
++        pour_controller.target_tilt = 0.0
+         pour_controller.stop_pouring()
+         # Сохраняем статистику
+         if pour_controller.hit_ml > 0 or pour_controller.spilled_ml > 0:

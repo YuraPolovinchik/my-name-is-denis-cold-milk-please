@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="LiquidDefinition" format=3]
+
+[resource]
+script = Resource("res://scripts/liquid/liquid_definition.gd")
+id = "milk"
+display_name = "Молоко"
+color = Color(0.95, 0.93, 0.88, 0.90)
+opacity = 0.88
+density = 1.03
+pour_start_angle = 30.0
+flow_rate_min = 14.0
+flow_rate_max = 80.0
+stream_width_min = 0.010
+stream_width_max = 0.028
+pour_sound_path = ""
+hit_sound_path = ""
+spill_sound_path = ""

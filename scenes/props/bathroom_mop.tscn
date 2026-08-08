@@ -1,0 +1,78 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://scripts/interactions/physical_item.gd" id="1_item"]
+[ext_resource type="Script" path="res://scripts/cleanup/absorption_controller.gd" id="2_absorb"]
+
+[sub_resource type="StandardMaterial3D" id="HandleMaterial"]
+albedo_color = Color(0.18, 0.42, 0.55, 1)
+metallic = 0.35
+roughness = 0.42
+
+[sub_resource type="StandardMaterial3D" id="HeadMaterial"]
+albedo_color = Color(0.12, 0.32, 0.30, 1)
+roughness = 0.92
+
+[sub_resource type="CylinderMesh" id="HandleMesh"]
+material = SubResource("HandleMaterial")
+top_radius = 0.022
+bottom_radius = 0.022
+height = 1.42
+
+[sub_resource type="BoxMesh" id="HeadMesh"]
+material = SubResource("HeadMaterial")
+size = Vector3(0.46, 0.07, 0.14)
+
+[sub_resource type="CapsuleShape3D" id="BodyShape"]
+radius = 0.045
+height = 1.46
+
+[sub_resource type="BoxShape3D" id="HeadShape"]
+size = Vector3(0.46, 0.08, 0.14)
+
+[sub_resource type="BoxShape3D" id="InteractionShape"]
+size = Vector3(0.62, 1.65, 0.42)
+
+[node name="BathroomMop" type="RigidBody3D"]
+mass = 1.15
+freeze = true
+collision_layer = 2
+collision_mask = 3
+script = ExtResource("1_item")
+item_id = &"mop"
+display_name = "ШВАБРА"
+impact_noise_scale = 0.28
+grip_point_path = NodePath("GripPoint")
+
+[node name="Visual" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.75, 0)
+mesh = SubResource("HandleMesh")
+material_override = SubResource("HandleMaterial")
+
+[node name="MopHead" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.055, 0)
+mesh = SubResource("HeadMesh")
+material_override = SubResource("HeadMaterial")
+
+[node name="HandleCollision" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.75, 0)
+shape = SubResource("BodyShape")
+
+[node name="HeadCollision" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.055, 0)
+shape = SubResource("HeadShape")
+
+[node name="GripPoint" type="Node3D" parent="."]
+position = Vector3(0, 1.05, 0)
+
+[node name="InteractionArea" type="Area3D" parent="."]
+position = Vector3(0, 0.72, 0)
+collision_layer = 2
+collision_mask = 0
+monitoring = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractionArea"]
+shape = SubResource("InteractionShape")
+
+[node name="AbsorptionController" type="Node" parent="."]
+script = ExtResource("2_absorb")
+absorption_capacity_ml = 999999.0

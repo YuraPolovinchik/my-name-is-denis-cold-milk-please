@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="LiquidDefinition" format=3]
+
+[resource]
+script = Resource("res://scripts/liquid/liquid_definition.gd")
+id = "coffee_mix"
+display_name = "Кофе"
+color = Color(0.25, 0.15, 0.08, 0.92)
+opacity = 0.92
+density = 1.02
+pour_start_angle = 35.0
+flow_rate_min = 20.0
+flow_rate_max = 120.0
+stream_width_min = 0.006
+stream_width_max = 0.018
+pour_sound_path = ""
+hit_sound_path = ""
+spill_sound_path = ""

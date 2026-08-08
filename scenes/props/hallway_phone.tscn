@@ -1,0 +1,67 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/interactions/hallway_phone.gd" id="1_phone"]
+
+[sub_resource type="StandardMaterial3D" id="PhoneBodyMaterial"]
+albedo_color = Color(0.025, 0.03, 0.04, 1)
+roughness = 0.32
+
+[sub_resource type="StandardMaterial3D" id="PhoneScreenMaterial"]
+albedo_color = Color(0.06, 0.16, 0.22, 1)
+roughness = 0.18
+
+[sub_resource type="StandardMaterial3D" id="IndicatorMaterial"]
+albedo_color = Color(0.35, 0.78, 1, 1)
+emission_enabled = true
+emission = Color(0.2, 0.68, 1, 1)
+emission_energy_multiplier = 1.5
+
+[sub_resource type="BoxMesh" id="PhoneBodyMesh"]
+size = Vector3(0.18, 0.035, 0.32)
+
+[sub_resource type="BoxShape3D" id="PhoneShape"]
+size = Vector3(0.18, 0.045, 0.32)
+
+[node name="Phone" type="RigidBody3D"]
+mass = 0.19
+freeze = true
+collision_layer = 2
+collision_mask = 3
+script = ExtResource("1_phone")
+item_id = &"hallway_phone"
+display_name = "ТЕЛЕФОН"
+impact_noise_scale = 0.35
+grip_point_path = NodePath("GripPoint")
+
+[node name="PhoneVisual" type="Node3D" parent="."]
+
+[node name="PhoneBody" type="MeshInstance3D" parent="PhoneVisual"]
+mesh = SubResource("PhoneBodyMesh")
+material_override = SubResource("PhoneBodyMaterial")
+
+[node name="PhoneScreen" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.0205, -0.005)
+mesh = SubResource("PhoneBodyMesh")
+scale = Vector3(0.82, 0.05, 0.82)
+material_override = SubResource("PhoneScreenMaterial")
+
+[node name="Indicator" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.024, -0.105)
+mesh = SubResource("PhoneBodyMesh")
+scale = Vector3(0.22, 0.03, 0.08)
+material_override = SubResource("IndicatorMaterial")
+visible = false
+
+[node name="ScreenGlow" type="OmniLight3D" parent="."]
+position = Vector3(0, 0.10, 0)
+light_color = Color(0.32, 0.78, 1, 1)
+light_energy = 0.22
+omni_range = 0.9
+shadow_enabled = false
+visible = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("PhoneShape")
+
+[node name="GripPoint" type="Node3D" parent="."]
+position = Vector3(0, 0.03, 0)

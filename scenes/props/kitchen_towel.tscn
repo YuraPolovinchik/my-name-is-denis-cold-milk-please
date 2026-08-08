@@ -1,0 +1,52 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/interactions/physical_item.gd" id="1_item"]
+[ext_resource type="Script" path="res://scripts/cleanup/absorption_controller.gd" id="2_absorb"]
+
+[sub_resource type="StandardMaterial3D" id="TowelMaterial"]
+albedo_color = Color(0.08, 0.24, 0.23, 1)
+roughness = 0.94
+shading_mode = 2
+
+[sub_resource type="BoxMesh" id="TowelMesh"]
+material = SubResource("TowelMaterial")
+size = Vector3(0.34, 0.028, 0.22)
+
+[sub_resource type="BoxShape3D" id="TowelShape"]
+size = Vector3(0.34, 0.05, 0.22)
+
+[sub_resource type="BoxShape3D" id="InteractionShape"]
+size = Vector3(0.44, 0.16, 0.32)
+
+[node name="KitchenTowel" type="RigidBody3D"]
+mass = 0.18
+freeze = true
+collision_layer = 2
+collision_mask = 3
+script = ExtResource("1_item")
+item_id = &"towel"
+display_name = "КУХОННОЕ ПОЛОТЕНЦЕ"
+impact_noise_scale = 0.15
+grip_point_path = NodePath("GripPoint")
+
+[node name="Visual" type="MeshInstance3D" parent="."]
+mesh = SubResource("TowelMesh")
+material_override = SubResource("TowelMaterial")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("TowelShape")
+
+[node name="GripPoint" type="Node3D" parent="."]
+position = Vector3(0, 0.02, 0)
+
+[node name="InteractionArea" type="Area3D" parent="."]
+collision_layer = 2
+collision_mask = 0
+monitoring = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractionArea"]
+shape = SubResource("InteractionShape")
+
+[node name="AbsorptionController" type="Node" parent="."]
+script = ExtResource("2_absorb")
+absorption_capacity_ml = 400.0

@@ -1,0 +1,83 @@
+[gd_scene load_steps=16 format=3]
+
+[ext_resource type="Script" path="res://characters/rita_cat/scripts/rita_cat.gd" id="1_root"]
+[ext_resource type="PackedScene" path="res://characters/rita_cat/assets/animal-cat.glb" id="2_cat"]
+[ext_resource type="Script" path="res://characters/rita_cat/scripts/cat_body_controller.gd" id="3_body"]
+[ext_resource type="Script" path="res://characters/rita_cat/scripts/cat_intention_controller.gd" id="4_intention"]
+[ext_resource type="Script" path="res://characters/rita_cat/scripts/cat_story_director.gd" id="5_director"]
+[ext_resource type="Script" path="res://characters/rita_cat/scripts/cat_story_deck.gd" id="6_deck"]
+[ext_resource type="Script" path="res://characters/rita_cat/scripts/cat_chaos_observer.gd" id="7_chaos"]
+[ext_resource type="Script" path="res://characters/rita_cat/scripts/cat_relationship_memory.gd" id="8_memory"]
+[ext_resource type="Script" path="res://characters/rita_cat/scripts/cat_animation_controller.gd" id="9_animation"]
+[ext_resource type="Script" path="res://characters/rita_cat/scripts/cat_audio_controller.gd" id="10_audio"]
+[ext_resource type="Script" path="res://characters/rita_cat/scripts/cat_stuck_recovery.gd" id="11_stuck"]
+[ext_resource type="Script" path="res://characters/rita_cat/scripts/cat_interest_sensor.gd" id="12_sensor"]
+[ext_resource type="Script" path="res://characters/rita_cat/scripts/cat_debug_panel.gd" id="13_debug"]
+
+[sub_resource type="CapsuleShape3D" id="Capsule_cat"]
+radius = 0.18
+height = 0.46
+
+[sub_resource type="SphereShape3D" id="Sphere_interest"]
+radius = 1.4
+
+[node name="RitaCat" type="CharacterBody3D"]
+collision_layer = 2
+collision_mask = 1
+script = ExtResource("1_root")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.23, 0)
+shape = SubResource("Capsule_cat")
+
+[node name="VisualRoot" type="Node3D" parent="."]
+scale = Vector3(0.32, 0.32, 0.32)
+
+[node name="AnimalCat" parent="VisualRoot" instance=ExtResource("2_cat")]
+
+[node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]
+path_height_offset = 0.0
+radius = 0.19
+height = 0.46
+path_desired_distance = 0.18
+target_desired_distance = 0.20
+avoidance_enabled = false
+
+[node name="CatInterestSensor" type="Area3D" parent="."]
+collision_layer = 0
+collision_mask = 2
+script = ExtResource("12_sensor")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="CatInterestSensor"]
+position = Vector3(0, 0.35, 0)
+shape = SubResource("Sphere_interest")
+
+[node name="CatBodyController" type="Node" parent="."]
+script = ExtResource("3_body")
+
+[node name="CatIntentionController" type="Node" parent="."]
+script = ExtResource("4_intention")
+
+[node name="CatRelationshipMemory" type="Node" parent="."]
+script = ExtResource("8_memory")
+
+[node name="CatAnimationController" type="Node" parent="."]
+script = ExtResource("9_animation")
+
+[node name="CatAudioController" type="Node" parent="."]
+script = ExtResource("10_audio")
+
+[node name="CatStuckRecovery" type="Node" parent="."]
+script = ExtResource("11_stuck")
+
+[node name="CatDebugPanel" type="Node" parent="."]
+script = ExtResource("13_debug")
+
+[node name="CatStoryDirector" type="Node" parent="."]
+script = ExtResource("5_director")
+
+[node name="CatStoryDeck" type="Node" parent="CatStoryDirector"]
+script = ExtResource("6_deck")
+
+[node name="CatChaosObserver" type="Node" parent="CatStoryDirector"]
+script = ExtResource("7_chaos")

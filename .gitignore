@@ -1,0 +1,17 @@
+.godot/
+*.tmp
+*.log
+build/
+exports/
+dist/web_debug/
+.tmp/
+web_test_logs/
+.playwright-cli/
+*.log
+.DS_Store
+
+# Local desktop/runtime sources exceed GitHub's 100 MB per-file limit.
+# The published Web build uses assets/football_video_web.ogv instead.
+assets/football_video.ogv
+assets/football.ogv/
+tools/godot/

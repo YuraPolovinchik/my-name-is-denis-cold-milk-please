@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="LiquidDefinition" format=3]
+
+[resource]
+script = Resource("res://scripts/liquid/liquid_definition.gd")
+id = "water"
+display_name = "Вода"
+color = Color(0.6, 0.75, 0.9, 0.85)
+opacity = 0.70
+density = 1.0
+pour_start_angle = 30.0
+flow_rate_min = 15.0
+flow_rate_max = 95.0
+stream_width_min = 0.008
+stream_width_max = 0.025
+pour_sound_path = ""
+hit_sound_path = ""
+spill_sound_path = ""
