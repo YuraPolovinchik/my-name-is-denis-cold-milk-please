@@ -16,7 +16,7 @@ func _ready() -> void:
 func _define_tutorial_steps() -> void:
 	_steps = [
 		{"id": "welcome", "text": "Добро пожаловать! Это игра 'Не Разбуди Риту'.\nНажмите любую клавишу для продолжения.", "key": "any"},
-		{"id": "movement", "text": "WASD — движение\nShift — бег (громко)\nCtrl — присесть (тихо)\nAlt — на носочках", "key": "move"},
+		{"id": "movement", "text": "WASD — движение\nShift — бег (громко)\nC — присесть (тихо)\nAlt — на носочках", "key": "move"},
 		{"id": "interaction", "text": "E — обычное взаимодействие\nУдерживать E — тихое\nShift+E — быстрое (громко)", "key": "interact"},
 		{"id": "pickup", "text": "ЛКМ — взять предмет\nПКМ — аккуратно поставить\nR — повернуть предмет", "key": "pickup"},
 		{"id": "noise", "text": "Следите за индикатором шума Риты!\nКрасный = она просыпается", "key": "any"},

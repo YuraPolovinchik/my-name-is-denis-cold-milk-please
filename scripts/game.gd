@@ -1165,7 +1165,9 @@ func _ensure_input_actions() -> void:
     _ensure_key_action(&"move_left", KEY_A)
     _ensure_key_action(&"move_right", KEY_D)
     _ensure_key_action(&"sprint", KEY_SHIFT)
-    _ensure_key_action(&"crouch", KEY_CTRL)
+    # Ctrl+W is a reserved browser shortcut and closes the game tab.  C keeps
+    # crouch usable while moving forward in both Web and desktop builds.
+    _ensure_key_action(&"crouch", KEY_C)
     _ensure_key_action(&"tiptoe", KEY_ALT)
     _ensure_key_action(&"interact", KEY_E)
     _ensure_key_action(&"dev_overlay", KEY_F3)
@@ -1237,6 +1239,21 @@ func _run_optional_tests() -> void:
     for group_name in required_groups:
         assert(not get_tree().get_nodes_in_group(String(group_name)).is_empty(), "Missing required group: %s" % String(group_name))
     assert(get_tree().get_first_node_in_group("player") != null, "Player missing")
+    var crouch_has_safe_key := false
+    for crouch_event in InputMap.action_get_events(&"crouch"):
+        if crouch_event is InputEventKey and crouch_event.physical_keycode == KEY_C:
+            crouch_has_safe_key = true
+            break
+    assert(crouch_has_safe_key, "Crouch has no browser-safe C binding")
+    var crouch_camera := player.get_node_or_null("Camera") as Camera3D
+    assert(crouch_camera != null, "Player camera missing for crouch test")
+    var standing_camera_y := crouch_camera.position.y
+    Input.action_press(&"crouch")
+    player.call("_update_movement", 0.25)
+    Input.action_release(&"crouch")
+    assert(crouch_camera.position.y < standing_camera_y - 0.2, "Crouch does not lower the player view")
+    player.call("_update_movement", 0.25)
+    print("CROUCH_CONTROL_TEST_OK key=C")
     var payment_room := builder._objects.get("payment_altar_room") as Node3D
     var payment_door := builder._objects.get("payment_altar_door") as Node
     var payment_altar := builder._objects.get("payment_altar") as Node3D

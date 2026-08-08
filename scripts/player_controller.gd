@@ -1071,7 +1071,7 @@ func _update_interaction_target() -> void:
             else:
                 prompt = "ЛКМ — ПОСТАВИТЬ"
         else:
-            prompt = "R — ПОВОРОТ | Shift+R — НАКЛОН | Ctrl+R — КРЕН | ЛКМ — ПОСТАВИТЬ"
+            prompt = "R — ПОВОРОТ | Shift+R — НАКЛОН | C+R — КРЕН | ЛКМ — ПОСТАВИТЬ"
     elif held_item != null:
         prompt += "  |  R — ПОВОРОТ  |  ЛКМ — ПОСТАВИТЬ"
     elif pushed_body != null and is_instance_valid(pushed_body):
