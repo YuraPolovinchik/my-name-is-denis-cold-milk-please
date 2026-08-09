@@ -29,6 +29,7 @@ var last_quest_signature := ""
 var stalled_seconds := 0.0
 var helped_signatures: Dictionary = {}
 var flood_story_used := false
+var vacuum_panic_used := false
 var telemetry := {
 	"first_story_time": -1.0,
 	"started": [],
@@ -69,6 +70,12 @@ func _process(delta: float) -> void:
 		if flood_story != null:
 			flood_story_used = true
 			_start_story(flood_story, {"objects": objects, "chaos": chaos.chaos_budget})
+			return
+	if active_story == null and _vacuum_panic_ready():
+		var vacuum_story := stories.get(&"VACUUM_STORY") as CatStory
+		if vacuum_story != null and deck.reserve_reactive(&"VACUUM_STORY", &"HOUSEHOLD_EVENT"):
+			vacuum_panic_used = true
+			_start_story(vacuum_story, {"objects": objects, "chaos": chaos.chaos_budget})
 			return
 	if active_story != null:
 		chaos.sample_now()
@@ -157,6 +164,12 @@ func _flood_emergency_ready() -> bool:
 	var flood_story := stories.get(&"FLOOD_ESCAPE_STORY") as CatStory
 	return flood_story != null and flood_story.can_start({"objects": objects, "chaos": chaos.chaos_budget})
 
+func _vacuum_panic_ready() -> bool:
+	if vacuum_panic_used or deck == null or &"VACUUM_STORY" in deck.completed_cat_stories:
+		return false
+	var vacuum_story := stories.get(&"VACUUM_STORY") as CatStory
+	return vacuum_story != null and vacuum_story.can_start({"objects": objects, "chaos": chaos.chaos_budget})
+
 func force_story(id: StringName) -> bool:
 	if active_story != null or not stories.has(id):
 		return false
@@ -225,6 +238,7 @@ func debug_state() -> Dictionary:
 		"calm_left": calm_left,
 		"chaos": chaos.chaos_budget if chaos != null else 0,
 		"flood_story_used": flood_story_used,
+		"vacuum_panic_used": vacuum_panic_used,
 	}
 
 func telemetry_snapshot() -> Dictionary:

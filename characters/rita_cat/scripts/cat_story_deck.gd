@@ -45,6 +45,28 @@ func remaining() -> Array[StringName]:
             result.append(story_id)
     return result
 
+func reserve_reactive(story_id: StringName, category: StringName) -> bool:
+    if story_id in completed_cat_stories:
+        return false
+    if story_id in selected_stories:
+        return true
+    if selected_stories.size() < 4:
+        selected_stories.append(story_id)
+        return true
+    # A physical reaction replaces one still-unused card instead of creating a
+    # fifth serious intervention. Prefer an alternative from the same category.
+    var alternatives: Array = CATEGORIES.get(category, [])
+    for index in range(selected_stories.size()):
+        var current := selected_stories[index]
+        if current in alternatives and current not in completed_cat_stories:
+            selected_stories[index] = story_id
+            return true
+    for index in range(selected_stories.size() - 1, -1, -1):
+        if selected_stories[index] not in completed_cat_stories:
+            selected_stories[index] = story_id
+            return true
+    return false
+
 func get_state() -> Dictionary:
     return {
         "seed": seed_value,

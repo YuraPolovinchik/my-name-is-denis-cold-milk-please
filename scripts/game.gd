@@ -173,6 +173,12 @@ func _capture_room_if_requested() -> void:
         file_name = "docs/evidence/rita_cat/flood_mop_interference.png"
         cat_capture = "flood"
         show_hud = true
+    elif "--capture-cat-vacuum" in args:
+        camera_position = Vector3(-4.05, 1.08, 0.20)
+        camera_target = Vector3(-5.35, 0.25, 1.40)
+        file_name = "docs/evidence/rita_cat/vacuum_panic.png"
+        cat_capture = "vacuum"
+        show_hud = true
     elif "--capture-intro-minimal" in args:
         camera_position = Vector3(1.95, 1.62, -0.10)
         camera_target = Vector3(4.80, 1.05, -4.20)
@@ -1088,6 +1094,20 @@ func _capture_room_if_requested() -> void:
                     capture_cat.face_world_point(cat_flood_mop.global_position)
                     hud.call("_on_quest_updated", QuestManager.get_state())
                     hud.call("_update_kitchen_contamination")
+            elif cat_capture == "vacuum":
+                var cat_vacuum := builder._objects.get("vacuum") as Node3D
+                if cat_vacuum != null:
+                    cat_vacuum.global_position = Vector3(-4.72, 0.12, 0.62)
+                    cat_vacuum.set("active", true)
+                    cat_vacuum.set_physics_process(true)
+                    cat_vacuum.call("_set_indicator", true)
+                    capture_cat.global_position = Vector3(-5.62, 0.10, 1.52)
+                    capture_cat.story_director.force_story(&"VACUUM_STORY")
+                    if capture_cat.story_director.active_story != null:
+                        capture_cat.story_director.active_story.advance(2.3)
+                    capture_cat.set_body_state(CatBodyController.BodyState.STARTLED)
+                    capture_cat.face_world_point(cat_vacuum.global_position)
+                    capture_cat.rotation.y = capture_cat.desired_yaw
             camera.global_position = camera_position
             camera.look_at(camera_target, Vector3.UP)
             camera.fov = 58.0
@@ -2427,6 +2447,27 @@ func _run_optional_tests() -> void:
     assert(test_cat.story_director.active_story == null, "Flood reaction cannot be resolved by reassuring the cat")
     cleanup_mop.set("held", false)
     flood_visual.set_flood_state(false, 0, 0.0, 0.0, false)
+    var test_vacuum := builder._objects.get("vacuum") as Node3D
+    test_cat.story_director.abort_current(&"vacuum_panic_test")
+    test_cat.story_director.deck.completed_cat_stories.erase(&"VACUUM_STORY")
+    test_cat.story_director.vacuum_panic_used = false
+    test_vacuum.set("active", true)
+    test_vacuum.set_physics_process(true)
+    test_cat.global_position = test_vacuum.global_position + Vector3(1.45, 0.0, 0.0)
+    assert(test_cat.story_director.call("_vacuum_panic_ready"), "RitaCat ignores an active vacuum at physical proximity")
+    assert(test_cat.story_director.force_story(&"VACUUM_STORY"), "RitaCat vacuum panic story cannot start")
+    var vacuum_cat_story := test_cat.story_director.active_story as CatVacuumStory
+    assert(vacuum_cat_story.phase == CatStory.Phase.TELEGRAPH, "Vacuum panic has no warning window")
+    vacuum_cat_story.advance(2.3)
+    assert(test_cat.vacuum_panic_active and test_cat.movement_speed_multiplier > 1.8, "Vacuum panic does not make the cat flee at a frantic speed")
+    assert(test_vacuum.is_physics_processing(), "Cat panic incorrectly freezes the robot vacuum")
+    player.set("held_item", null)
+    var calm_cat_reply := test_cat.perform_interaction(player, 0)
+    assert(calm_cat_reply.contains("перестал орать"), "Player cannot visibly calm the vacuum-panicked cat")
+    assert(test_cat.story_director.active_story == null and not test_cat.vacuum_panic_active and is_equal_approx(test_cat.movement_speed_multiplier, 1.0), "Cat remains panicked after reassurance")
+    test_vacuum.set("active", false)
+    test_vacuum.call("_set_vacuum_blocking", false)
+    print("CAT_VACUUM_PANIC_TEST_OK distance=1.45m speed=%.2fx" % (test_cat.trot_speed / test_cat.walk_speed * 1.18))
     print("RITA_CAT_STORY_SYSTEM_TESTS_OK")
     print("DENIS_FOUNDATION_TESTS_OK")
     print("DENIS_COMPLETE_PROJECT_TESTS_OK")

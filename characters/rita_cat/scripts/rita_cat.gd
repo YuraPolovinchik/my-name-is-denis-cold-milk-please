@@ -21,6 +21,8 @@ var wants_motion := false
 var idle_left := 8.0
 var desired_yaw := 0.0
 var awareness_left := 0.0
+var movement_speed_multiplier := 1.0
+var vacuum_panic_active := false
 
 const CALM_LIFE_SPOTS: Array[Vector3] = [
 	Vector3(-6.75, 0.10, -1.10),
@@ -94,8 +96,8 @@ func _follow_route(_delta: float) -> void:
 		route.pop_front()
 		return
 	var direction := flat_delta.normalized()
-	velocity.x = direction.x * walk_speed
-	velocity.z = direction.z * walk_speed
+	velocity.x = direction.x * walk_speed * movement_speed_multiplier
+	velocity.z = direction.z * walk_speed * movement_speed_multiplier
 	face_world_point(global_position + direction)
 
 func _build_safe_route(origin: Vector3, destination: Vector3) -> Array[Vector3]:
@@ -176,6 +178,41 @@ func get_nearest_flood_perch() -> Vector3:
 func meow(strength := 3.5) -> void:
 	audio_controller.meow(strength)
 
+func panic_yowl(strength := 9.0) -> void:
+	audio_controller.panic_yowl(strength)
+
+func begin_vacuum_panic(source: Node3D) -> void:
+	vacuum_panic_active = true
+	movement_speed_multiplier = maxf(1.0, trot_speed / maxf(walk_speed, 0.01)) * 1.18
+	set_intention(CatIntentionController.Intention.REACT_TO_DANGER)
+	continue_vacuum_panic(source)
+
+func continue_vacuum_panic(source: Node3D) -> void:
+	if not vacuum_panic_active or not is_instance_valid(source):
+		return
+	var destination := global_position
+	var best_score := -INF
+	for candidate in CALM_LIFE_SPOTS:
+		if global_position.distance_to(candidate) < 1.15:
+			continue
+		var source_distance := Vector2(candidate.x - source.global_position.x, candidate.z - source.global_position.z).length()
+		var travel_distance := Vector2(candidate.x - global_position.x, candidate.z - global_position.z).length()
+		var score := source_distance - travel_distance * 0.08 + randf_range(-0.45, 0.45)
+		if score > best_score:
+			best_score = score
+			destination = candidate
+	move_to_world(destination)
+	set_body_state(CatBodyController.BodyState.TROT)
+
+func finish_vacuum_panic() -> void:
+	vacuum_panic_active = false
+	movement_speed_multiplier = 1.0
+	wants_motion = false
+	route.clear()
+	velocity = Vector3.ZERO
+	set_intention(CatIntentionController.Intention.REST)
+	set_body_state(CatBodyController.BodyState.SIT)
+
 func _idle_life(delta: float) -> void:
 	if story_director.active_story != null:
 		return
@@ -248,7 +285,13 @@ func perform_interaction(actor = null, _mode := 0) -> String:
 		set_intention(CatIntentionController.Intention.PLAY)
 		audio_controller.friendly_chirp()
 		return "%s погнался за игрушечной мышью и забыл о пакости." % cat_display_name
+	var active_story_id := story_director.active_story.story_id if story_director.active_story != null else &""
 	if story_director.interact_with_story():
+		if active_story_id == &"VACUUM_STORY":
+			relationship_memory.successful_prevention()
+			set_body_state(CatBodyController.BodyState.SIT)
+			audio_controller.purr()
+			return "%s прижался к полу, выдохнул и перестал орать." % cat_display_name
 		return "%s отвлёкся. История предотвращена без штрафа." % cat_display_name
 	if relationship_memory.pet():
 		set_body_state(CatBodyController.BodyState.SIT)
@@ -258,6 +301,8 @@ func perform_interaction(actor = null, _mode := 0) -> String:
 
 func get_prompt(_actor = null) -> String:
 	if story_director.active_story != null:
+		if story_director.active_story.story_id == &"VACUUM_STORY":
+			return "E — УСПОКОИТЬ %s • МОЖНО КОРМОМ ИЛИ ИГРУШКОЙ" % cat_display_name.to_upper()
 		return "E — ОТВЛЕЧЬ КОТА ДО ТОГО, КАК ОН ВМЕШАЕТСЯ"
 	return "E — ТИХО ПОГЛАДИТЬ %s" % cat_display_name.to_upper()
 
