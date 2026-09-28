@@ -17,10 +17,17 @@ var last_noise: Dictionary = {
     "source_id": "—"
 }
 
+## Радиус, внутри которого шум считается действием самого игрока (наушники глушат его)
+const HEADPHONE_SOURCE_RADIUS := 2.2
+## Внешние события (звонок, дверной звонок) наушниками не глушатся
+const HEADPHONE_EXEMPT_SOURCES: Array[StringName] = [&"phone", &"doorbell"]
+
 func reset() -> void:
     _rooms.clear()
     _edges.clear()
     _door_states.clear()
+    if has_meta("player_noise_reduction"):
+        remove_meta("player_noise_reduction")
     last_noise = {
         "category": "—",
         "source_room": "—",
@@ -73,6 +80,7 @@ func emit_noise(source_position: Vector3, strength: float, category: StringName,
     var structure_factor := _structure_borne_factor(category, source_id)
     if structure_factor > 0.0:
         heard = maxf(heard, raw_strength * structure_factor)
+    heard = _apply_headphone_reduction(heard, source_position, source_id)
     if heard < MIN_HEARD_STRENGTH:
         heard = 0.0
     last_noise = {
@@ -87,6 +95,20 @@ func emit_noise(source_position: Vector3, strength: float, category: StringName,
     RunStats.record_noise(raw_strength, heard, category)
     noise_emitted.emit(last_noise)
     return heard
+
+## Шумоподавляющие наушники игрока: глушат его собственные действия,
+## пока активны (meta ставит noise_cancelling_headphones.gd).
+func _apply_headphone_reduction(heard: float, source_position: Vector3, source_id: StringName) -> float:
+    if heard <= 0.0 or not has_meta("player_noise_reduction"):
+        return heard
+    if source_id in HEADPHONE_EXEMPT_SOURCES:
+        return heard
+    var player := get_tree().get_first_node_in_group("player") as Node3D
+    if player == null:
+        return heard
+    if player.global_position.distance_to(source_position) > HEADPHONE_SOURCE_RADIUS:
+        return heard
+    return heard * (1.0 - clampf(float(get_meta("player_noise_reduction")), 0.0, 1.0))
 
 func _structure_borne_factor(category: StringName, source_id: StringName) -> float:
     # Motors and impacts travel through the floor even when airborne sound is blocked by doors.

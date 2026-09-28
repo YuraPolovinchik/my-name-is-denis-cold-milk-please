@@ -31,6 +31,9 @@ func _define_achievements() -> void:
 	_register_achievement("money_bags", "Мешок Денег", "Найдите 2000+ рублей за забег", 0)
 	_register_achievement("clumsy", "Неуклюжий", "Разбудите Риту 5 раз", 0)
 	_register_achievement("butterfingers", "Руки-Крюки", "Уроните 10 предметов", 0)
+	# Достижения, на которые уже ссылаются проверки забега (run_stats._check_achievements)
+	_register_achievement("sniper_pour", "Снайпер Разлива", "Разлейте молоко и воду почти без потерь (точность 99.5%+)", 0)
+	_register_achievement("zero_spill", "Ни Капли Мимо", "Идеальный забег: ни капли не пролито (точность 100%)", 0)
 
 func _register_achievement(id: String, title: String, description: String, progress_needed: int) -> void:
 	_achievements[id] = {
@@ -100,6 +103,32 @@ func on_beer_drank(amount: int = 1) -> void:
 	increment_progress("beer_drank", amount)
 	if get_progress("beer_drank") >= 5:
 		unlock_achievement("beer_lover")
+
+## Итоговые достижения забега — вызывается из RunStats.finish_run()
+func evaluate_run_result(result: Dictionary) -> void:
+	if result.get("rita_awake", true):
+		return
+	var run_time := float(result.get("time", INF))
+	var balance := float(result.get("balance", -INF))
+	# "Тихий Ниндзя" — без громких действий, пока Рита спит
+	if int(result.get("loud_actions", 999)) == 0:
+		unlock_achievement("silent_ninja")
+	# "Выживший" — Рита ни разу не проснулась за забег
+	unlock_achievement("rita_survivor")
+	# "Мастер Кофе" — идеальный кофе быстрее 120 секунд
+	if run_time <= 120.0:
+		unlock_achievement("coffee_master")
+	# "Богатый Денис" — баланс выше 2000 рублей на финише
+	if balance >= 2000.0:
+		unlock_achievement("rich_denis")
+	# "Спидраннер" — забег быстрее 90 секунд
+	if run_time <= 90.0:
+		unlock_achievement("speed_runner")
+	# "Экономист" — собраны все спрятанные тайники квартиры
+	var stashes_total := int(result.get("cash_stashes_total", 0))
+	var stashes_collected := int(result.get("cash_stashes_collected", 0))
+	if stashes_total > 0 and stashes_collected >= stashes_total:
+		unlock_achievement("economist")
 
 func is_unlocked(id: String) -> bool:
 	return _achievements.has(id) and bool(_achievements[id].get("unlocked", false))

@@ -46,7 +46,7 @@ func _process(delta: float) -> void:
         return
     _silence_time += delta
     if _silence_time >= DECAY_DELAY and wake_level > 0.0:
-        wake_level = maxf(0.0, wake_level - DECAY_PER_SECOND * delta)
+        wake_level = maxf(0.0, wake_level - DECAY_PER_SECOND * DifficultyManager.get_noise_decay() * delta)
         _update_state(false)
 
 func _process_demand_sleep(delta: float) -> void:

@@ -24,6 +24,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+      - name: Validate static Web export
+        shell: bash
+        run: |
+          test -s dist/web/index.html
+          test -s dist/web/index.wasm
+          test -s dist/web/index.pck
+          test "$(stat -c%s dist/web/index.pck)" -lt 100000000
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload Web export

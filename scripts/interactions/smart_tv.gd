@@ -1,7 +1,5 @@
 extends "res://scripts/interactions/television.gd"
 
-const SMART_TV_SCRIPT := preload("res://scripts/interactions/smart_tv.gd")
-
 var channel_index: int = 0
 var channels: Array[Dictionary] = [
     {"name": "ФУТБОЛ", "color": Color("4b8d58"), "noise": 6.5},

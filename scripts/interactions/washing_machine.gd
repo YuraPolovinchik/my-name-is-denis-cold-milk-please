@@ -55,7 +55,7 @@ func _ready() -> void:
     add_to_group("washing_machine")
     add_to_group("household_hazards")
     display_name = "СТИРАЛЬНАЯ МАШИНА"
-    _activation_left = randf_range(first_cycle_delay_min, first_cycle_delay_max)
+    _activation_left = randf_range(first_cycle_delay_min, first_cycle_delay_max) * DifficultyManager.get_hazard_delay()
     _base_rotation = rotation
     _base_height = position.y
     _drum = get_node_or_null("Drum") as Node3D
@@ -217,7 +217,7 @@ func perform_interaction(_actor, mode: int) -> String:
 func calm_machine() -> void:
     active = false
     calm_progress = calm_required
-    _activation_left = randf_range(rearm_delay_min, rearm_delay_max)
+    _activation_left = randf_range(rearm_delay_min, rearm_delay_max) * DifficultyManager.get_hazard_delay()
     rotation = _base_rotation
     position.y = _base_height
     _set_indicator(false)

@@ -37,6 +37,9 @@ DifficultyManager="*res://scripts/autoload/difficulty_manager.gd"
 PhotoMode="*res://scripts/autoload/photo_mode.gd"
 TutorialSystem="*res://scripts/autoload/tutorial_system.gd"
 SaveManager="*res://scripts/autoload/save_manager.gd"
+GraphicsEnhancer="*res://scripts/autoload/graphics_enhancer.gd"
+FurnitureEnhancer="*res://scripts/autoload/furniture_enhancer.gd"
+TrimEnhancer="*res://scripts/autoload/trim_enhancer.gd"
 
 [display]
 

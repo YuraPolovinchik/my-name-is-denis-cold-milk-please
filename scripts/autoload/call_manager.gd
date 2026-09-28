@@ -55,7 +55,7 @@ func reset() -> void:
     _rng.seed = RunStats.seed_value
     active = true
     question_active = false
-    time_to_question = _rng.randf_range(40.0, 55.0)
+    time_to_question = _rng.randf_range(40.0, 55.0) / maxf(DifficultyManager.get_call_frequency(), 0.1)
     answer_time_left = 0.0
     suspicion = 0
     question_kind = &"status"
@@ -76,7 +76,7 @@ func answer_question() -> String:
         reply = REPLIES[_question_index % REPLIES.size()]
     question_active = false
     answer_time_left = 0.0
-    time_to_question = _rng.randf_range(35.0, 70.0)
+    time_to_question = _rng.randf_range(35.0, 70.0) / maxf(DifficultyManager.get_call_frequency(), 0.1)
     RunStats.answered_calls += 1
     NoiseManager.emit_noise(Vector3(-5.5, 1.2, -1.5), 11.0, &"VOICE_CALL", &"denis_reply")
     question_answered.emit(reply)
@@ -125,7 +125,7 @@ func _miss_question() -> void:
     else:
         suspicion = mini(100, suspicion + 25)
         subtitle_requested.emit("Денис?.. Вас не слышно.")
-    time_to_question = _rng.randf_range(20.0, 38.0)
+    time_to_question = _rng.randf_range(20.0, 38.0) / maxf(DifficultyManager.get_call_frequency(), 0.1)
     question_missed.emit()
     NoiseManager.emit_noise(Vector3(-5.5, 1.2, -1.5), 26.0, &"VOICE_CALL", &"laptop_missed")
     if suspicion >= 100:

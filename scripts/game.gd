@@ -83,6 +83,8 @@ func _capture_layout_if_requested() -> void:
         return
     await get_tree().process_frame
     await get_tree().process_frame
+    # Wait for the Blender trim layer (TrimEnhancer) so it is in frame.
+    await _await_trim_mounted()
     if player == null or not is_instance_valid(player):
         get_tree().quit(3)
         return
@@ -110,12 +112,11 @@ func _capture_layout_if_requested() -> void:
     await get_tree().process_frame
     await RenderingServer.frame_post_draw
     var image := get_viewport().get_texture().get_image()
-    var path := ProjectSettings.globalize_path("res://docs/evidence/environment/apartment_top_view.png")
+    var path := ProjectSettings.globalize_path("res://layout_capture.png")
     DirAccess.make_dir_recursive_absolute(path.get_base_dir())
     var result := image.save_png(path)
-    print("LAYOUT_CAPTURE_SAVED: %s (%s)" % [path, error_string(result)])
-    get_tree().quit(0 if result == OK else 5)
-
+    print("ROOM_CAPTURE_SAVED: %s (%s)" % [path, error_string(result)])
+    get_tree().quit(0 if result == OK else 7)
 func _capture_room_if_requested() -> void:
     var args := OS.get_cmdline_user_args()
     var camera_position := Vector3.ZERO
@@ -378,10 +379,14 @@ func _capture_room_if_requested() -> void:
         camera_position = Vector3(-3.15, 1.62, -3.65)
         camera_target = Vector3(-5.55, 0.90, -0.15)
         file_name = "room_capture_living.png"
-    elif "--capture-corridor" in args:
+    elif "--capture-corridor" in OS.get_cmdline_user_args():
         camera_position = Vector3(0.0, 1.62, -4.65)
         camera_target = Vector3(0.0, 1.05, 4.85)
         file_name = "room_capture_corridor.png"
+    elif "--capture-entry" in args:
+        camera_position = Vector3(0.0, 1.62, 3.60)
+        camera_target = Vector3(0.0, 1.05, 5.28)
+        file_name = "room_capture_entry.png"
     elif "--capture-delivery" in args:
         camera_position = Vector3(0.0, 1.62, 3.65)
         camera_target = Vector3(0.0, 0.72, 5.98)
@@ -395,8 +400,8 @@ func _capture_room_if_requested() -> void:
         show_hud = true
         show_coffee_delivery = true
     elif "--capture-wardrobe" in args:
-        camera_position = Vector3(-4.65, 1.62, 6.92)
-        camera_target = Vector3(-4.65, 1.20, 9.20)
+        camera_position = Vector3(-4.65, 1.62, 7.05)
+        camera_target = Vector3(-6.10, 1.18, 8.30)
         file_name = "room_capture_wardrobe.png"
     elif "--capture-kitchen" in args:
         camera_position = Vector3(2.05, 1.62, 0.55)
@@ -489,8 +494,12 @@ func _capture_room_if_requested() -> void:
         return
     await get_tree().process_frame
     await get_tree().process_frame
+    # Wait for the Blender trim layer (TrimEnhancer) so it is in frame.
+    await _await_trim_mounted()
     player.set_physics_process(false)
     hud.visible = show_hud
+    if not show_hud:
+        TutorialSystem.visible = false
     var camera := player.get_node_or_null("Camera") as Camera3D
     if camera == null:
         get_tree().quit(6)
@@ -1136,11 +1145,28 @@ func _capture_room_if_requested() -> void:
             await RenderingServer.frame_post_draw
     await RenderingServer.frame_post_draw
     var image := get_viewport().get_texture().get_image()
+    # Browser QA keeps the rendered frame available to Playwright.
+    if OS.has_feature("web"):
+        print("WEB_ROOM_CAPTURE_READY: %s" % file_name)
+        get_tree().paused = true
+        return
     var path := ProjectSettings.globalize_path("res://" + file_name)
     DirAccess.make_dir_recursive_absolute(path.get_base_dir())
     var result := image.save_png(path)
     print("ROOM_CAPTURE_SAVED: %s (%s)" % [path, error_string(result)])
     get_tree().quit(0 if result == OK else 7)
+## Waits for the TrimEnhancer mounted flag; Web shader compilation needs extra time.
+## always include the Blender decor. Exits immediately if autoload missing.
+func _await_trim_mounted() -> void:
+    var deadline := Time.get_ticks_msec() + (45000 if OS.has_feature("web") else 10000)
+    while Time.get_ticks_msec() < deadline:
+        var trim := get_node_or_null("/root/TrimEnhancer")
+        if trim != null and bool(trim.get("mounted")):
+            for trim_settle in range(8):
+                await get_tree().process_frame
+            return
+        await get_tree().process_frame
+    print("ROOM_CAPTURE_WARN: trim_mount_timeout")
 
 func _stage_movie_capture_progress() -> void:
     var capture_tv := builder._objects.get("television") as Node
@@ -1570,15 +1596,15 @@ func _run_optional_tests() -> void:
     assert(corridor_north_cap != null and corridor_north_cap.mesh is BoxMesh and (corridor_north_cap.mesh as BoxMesh).size.x >= 3.70, "Widened corridor still has visible holes at the north wall")
     var bedroom_door_visual := builder._objects["bedroom_door"].get_node_or_null("Panel") as MeshInstance3D
     var bedroom_door_handle := builder._objects["bedroom_door"].get_node_or_null("HandleHallSide") as Node3D
-    assert(bedroom_door_visual != null and bedroom_door_visual.mesh is BoxMesh, "Bedroom doorway has no proper door leaf")
-    var bedroom_door_size := (bedroom_door_visual.mesh as BoxMesh).size
+    assert(bedroom_door_visual != null and bedroom_door_visual.mesh != null, "Bedroom doorway has no proper door leaf")
+    var bedroom_door_size := bedroom_door_visual.get_aabb().size
     assert(bedroom_door_size.x <= 0.06 and bedroom_door_size.y <= 2.21 and bedroom_door_size.z <= 1.29, "Room door is still an oversized slab")
     assert(bedroom_door_handle != null and bedroom_door_handle.position.z > 0.95, "Room door handle is mounted beside the hinge")
     assert(absf(builder.get_node("HallConsole").global_position.x) >= 1.30 and absf(builder.get_node("ShoeBench").global_position.x) >= 1.30, "Entry furniture is still piled in the corridor centre")
     assert(builder.get_node("DiningArea").global_position.z >= 1.20, "Dining furniture is still occupying the kitchen centre")
     assert(builder.get_node("TVConsole").global_position.x >= -2.05, "Television console is not placed against the corridor wall")
     var corridor_runner := builder.get_node_or_null("CorridorShell/Runner") as MeshInstance3D
-    assert(corridor_runner != null and corridor_runner.mesh is BoxMesh and (corridor_runner.mesh as BoxMesh).size.x >= 1.34, "Corridor was not widened to a comfortable clean route")
+    assert(corridor_runner != null and corridor_runner.mesh != null and corridor_runner.get_aabb().size.x >= 1.34, "Corridor was not widened to a comfortable clean route")
     assert(get_tree().get_nodes_in_group("environment_imported_prop").size() >= 12, "Curated apartment asset set is incomplete")
     for required_environment_prop in ["EntryDoormat", "ExternalMonitor", "RitaTableLamp", "BathroomWallCabinet", "KitchenTrashcan"]:
         assert(builder.get_node_or_null(required_environment_prop) != null, "Missing curated environment prop: %s" % required_environment_prop)
@@ -1612,15 +1638,15 @@ func _run_optional_tests() -> void:
     assert(fridge.global_position.x > 7.0 and fridge.global_position.z > -1.5, "Refrigerator is not on the east side wall")
     var north_counter := builder.get_node("KitchenFurniture/CounterTop") as MeshInstance3D
     var return_counter := builder.get_node("KitchenFurniture/SinkCounter") as MeshInstance3D
-    var north_counter_mesh := north_counter.mesh as BoxMesh
-    var return_counter_mesh := return_counter.mesh as BoxMesh
+    var north_counter_mesh := north_counter.get_aabb()
+    var return_counter_mesh := return_counter.get_aabb()
     assert(north_counter.global_position.z - north_counter_mesh.size.z * 0.5 <= -6.38, "North kitchen run is not tight to the wall")
     assert(return_counter.global_position.x + return_counter_mesh.size.x * 0.5 >= 7.88, "East kitchen return is not tight to the wall")
     var east_upper_cabinet := builder.get_node("KitchenFurniture/EastUpperCabinet") as Node3D
     assert(east_upper_cabinet.global_position.x > 7.55, "Upper cabinets still obscure the north window")
     var faucet_drop := builder.get_node("KitchenFurniture/FaucetDrop") as Node3D
     var sink_basin := builder.get_node("KitchenFurniture/SinkBasin") as MeshInstance3D
-    var sink_basin_mesh := sink_basin.mesh as BoxMesh
+    var sink_basin_mesh := sink_basin.get_aabb()
     var upper_south_edge := east_upper_cabinet.global_position.z + 0.86
     assert(upper_south_edge < faucet_drop.global_position.z - 0.35, "Upper cabinet intersects the faucet work zone")
     assert(faucet_drop.global_position.x > sink_basin.global_position.x - sink_basin_mesh.size.x * 0.5 and faucet_drop.global_position.x < sink_basin.global_position.x + sink_basin_mesh.size.x * 0.5, "Faucet outlet misses the sink basin")

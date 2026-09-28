@@ -40,7 +40,7 @@ func _ready() -> void:
 	_indicator = get_node_or_null("Indicator") as MeshInstance3D
 	_screen_light = get_node_or_null("ScreenGlow") as OmniLight3D
 	_visual = get_node_or_null("PhoneVisual") as Node3D
-	_next_activation_delay = randf_range(activation_delay_min, activation_delay_max)
+	_next_activation_delay = randf_range(activation_delay_min, activation_delay_max) * DifficultyManager.get_hazard_delay()
 	if _screen != null and _screen.material_override is StandardMaterial3D:
 		_screen_material = (_screen.material_override as StandardMaterial3D).duplicate()
 		_screen.material_override = _screen_material
@@ -56,7 +56,7 @@ func _process(delta: float) -> void:
 				place_randomly()
 				armed = true
 				_elapsed = 0.0
-				_next_activation_delay = randf_range(activation_delay_min, activation_delay_max)
+				_next_activation_delay = randf_range(activation_delay_min, activation_delay_max) * DifficultyManager.get_hazard_delay()
 		return
 	if armed and not active:
 		_elapsed += delta
@@ -107,7 +107,7 @@ func on_picked_up() -> void:
 	if active:
 		active = false
 		armed = false
-		_rearm_left = randf_range(rearm_delay_min, rearm_delay_max)
+		_rearm_left = randf_range(rearm_delay_min, rearm_delay_max) * DifficultyManager.get_hazard_delay()
 		_elapsed = 0.0
 		_pulse_elapsed = 0.0
 		_set_active_visual(false)

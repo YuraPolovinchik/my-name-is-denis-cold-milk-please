@@ -152,6 +152,7 @@ func _create_environment() -> void:
     _omni("KitchenMain", Vector3(3.45, 2.55, -1.45), Color("ffd5a4"), 2.25, 6.0, &"kitchen_lights")
     _omni("KitchenCounter", Vector3(3.35, 2.15, -3.65), Color("ffbd70"), 1.0, 3.8, &"kitchen_lights")
     _omni("HallLight", Vector3(0.0, 2.45, 0.4), Color("f1d0ac"), 0.9, 4.4, &"hall_lights")
+    _omni("EntryCeilingLight", Vector3(0.0, 2.52, 4.95), Color("ffe0b7"), 0.95, 3.5, &"hall_lights")
 
     # Dawn card and a lightweight skyline visible through both north windows.
     _box("DawnBackdrop", Vector3(0.0, 1.55, -7.60), Vector3(20.0, 4.6, 0.08), "dawn", false)
@@ -706,8 +707,8 @@ func _create_closed_rooms() -> void:
         _box_child(bedroom_shell, "RugStripe_%d" % i, Vector3(-7.15 + float(i) * 0.65, 0.052, 4.70), Vector3(0.08, 0.012, 2.12), "rug_light", false)
     _box_child(bedroom_shell, "ArtFrameA", Vector3(-3.10, 1.70, 6.39), Vector3(0.92, 0.76, 0.055), "oak_dark", false)
     _box_child(bedroom_shell, "ArtA", Vector3(-3.10, 1.70, 6.355), Vector3(0.78, 0.62, 0.018), "fabric_rust", false)
-    _box_child(bedroom_shell, "ArtFrameB", Vector3(-6.05, 1.72, 6.39), Vector3(0.82, 0.92, 0.055), "oak_dark", false)
-    _box_child(bedroom_shell, "ArtB", Vector3(-6.05, 1.72, 6.355), Vector3(0.68, 0.78, 0.018), "fabric_blue", false)
+    _box_child(bedroom_shell, "ArtFrameB", Vector3(-7.10, 1.72, 6.39), Vector3(0.82, 0.92, 0.055), "oak_dark", false)
+    _box_child(bedroom_shell, "ArtB", Vector3(-7.10, 1.72, 6.355), Vector3(0.68, 0.78, 0.018), "fabric_blue", false)
     for i in range(9):
         _sphere_child(bedroom_shell, "FairyLight_%d" % i, Vector3(-7.15 + float(i) * 0.58, 2.38 + sin(float(i) * 0.8) * 0.12, 6.34), 0.035, "warm_light", false)
 
@@ -733,8 +734,8 @@ func _create_closed_rooms() -> void:
 
     # Compact bathroom with a clear route from the doorway.
     var bath := _fixed_root("BathroomFurniture", Vector3(1.45, 0.0, 1.35))
-    _box_child(bath, "Vanity", Vector3(5.90, 0.46, 1.75), Vector3(1.15, 0.86, 0.58), "cabinet_dark", true)
-    _box_child(bath, "VanityTop", Vector3(5.90, 0.92, 1.75), Vector3(1.22, 0.08, 0.64), "counter", true)
+    _box_child(bath, "Vanity", Vector3(6.13, 0.46, 1.75), Vector3(0.62, 0.86, 1.15), "cabinet_dark", true)
+    _box_child(bath, "VanityTop", Vector3(6.13, 0.92, 1.75), Vector3(0.68, 0.08, 1.22), "counter", true)
     _box_child(bath, "Mirror", Vector3(6.46, 1.70, 1.75), Vector3(0.035, 1.10, 0.88), "mirror", false)
     _box_child(bath, "ToiletBase", Vector3(1.10, 0.30, 4.50), Vector3(0.62, 0.55, 0.78), "white", true)
     _box_child(bath, "ToiletTank", Vector3(1.10, 0.72, 4.87), Vector3(0.66, 0.72, 0.25), "white", true)
@@ -812,10 +813,10 @@ func _create_walk_in_wardrobe() -> void:
         var rack_x := -7.55 if rack_index == 0 else -2.05
         _box_child(room, "RackBack_%d" % rack_index, Vector3(rack_x, 1.25, 8.05), Vector3(0.10, 2.35, 2.25), "oak_dark", true)
         for shelf_index in range(3):
-            var shelf_y := 0.28 + float(shelf_index) * 0.78
+            var shelf_y: float = [0.28, 0.70, 1.84][shelf_index]
             _box_child(room, "Shelf_%d_%d" % [rack_index, shelf_index], Vector3(rack_x + (0.28 if rack_index == 0 else -0.28), shelf_y, 8.05), Vector3(0.58, 0.07, 2.25), "oak_light", true)
         var rail_x := rack_x + (0.47 if rack_index == 0 else -0.47)
-        _cylinder_between(room, "ClothesRail_%d" % rack_index, Vector3(rail_x, 1.84, 7.15), Vector3(rail_x, 1.84, 8.86), 0.025, "chrome")
+        _cylinder_between(room, "ClothesRail_%d" % rack_index, Vector3(rail_x, 1.78, 7.15), Vector3(rail_x, 1.78, 8.86), 0.025, "chrome")
 
     var garment_materials := ["fabric_blue", "fabric_rust", "bedroom", "cream"]
     for i in range(12):
@@ -831,7 +832,7 @@ func _create_walk_in_wardrobe() -> void:
         var folded := _loose_box(
             "FoldedClothes_%02d" % i,
             "СЛОЖЕННАЯ ОДЕЖДА",
-            Vector3(-7.16, 0.39 + float(i / 3) * 0.78, 7.42 + float(i % 3) * 0.48),
+            Vector3(-7.16, 0.39 + float(i / 3) * 0.42, 7.42 + float(i % 3) * 0.48),
             Vector3(0.42, 0.10, 0.34),
             garment_materials[i % garment_materials.size()],
             0.28
@@ -841,7 +842,7 @@ func _create_walk_in_wardrobe() -> void:
         var shoe_box := _loose_box(
             "ShoeBox_%02d" % i,
             "КОРОБКА С ОБУВЬЮ",
-            Vector3(-2.42, 0.43 + float(i / 2) * 0.78, 7.55 + float(i % 2) * 0.62),
+            Vector3(-2.42, 0.43 + float(i / 2) * 0.42, 7.55 + float(i % 2) * 0.62),
             Vector3(0.48, 0.20, 0.34),
             "cardboard",
             1.15
@@ -1594,6 +1595,9 @@ func _spawn_cash_stash(node_name: String, position_value: Vector3, amount: float
     stash.name = node_name
     stash.display_name = "ПОЯВИВШИЕСЯ ДЕНЬГИ" if spawned else "СПРЯТАННЫЕ ДЕНЬГИ"
     stash.amount = amount
+    if not spawned:
+        # Статичный тайник — учитывается достижением "Экономист"
+        stash.set_meta("static_cash", true)
     stash.position = position_value
     stash.normal_noise = 0.5
     stash.quiet_noise = 0.1
@@ -2629,7 +2633,7 @@ func _spawn_smart_kettle() -> Node3D:
     var smart_kettle := SMART_KETTLE_SCRIPT.new()
     smart_kettle.name = "SmartKettle"
     smart_kettle.display_name = "УМНЫЙ ЧАЙНИК"
-    smart_kettle.position = Vector3(4.20, 1.36, -5.39)
+    smart_kettle.position = Vector3(5.05, 1.19, -5.90)
     add_child(smart_kettle)
     
     # Визуализация умного чайника

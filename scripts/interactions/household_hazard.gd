@@ -78,7 +78,7 @@ func _process(delta: float) -> void:
         _rearm_left -= delta
         if _rearm_left <= 0.0 and not RitaSleep.is_angry and not RitaDemands.has_active_demand():
             armed = true
-            _elapsed = activation_delay
+            _elapsed = activation_delay * DifficultyManager.get_hazard_delay()
             _pulse_elapsed = 0.0
             _notified = false
             # Телефон каждый раз появляется в новом месте
@@ -92,7 +92,7 @@ func _process(delta: float) -> void:
                 position = available_spots[new_index]
         return
     _elapsed += delta
-    if not active and _elapsed >= activation_delay and _can_activate_now():
+    if not active and _elapsed >= activation_delay * DifficultyManager.get_hazard_delay() and _can_activate_now():
         active = true
         _set_indicator(true)
         if hazard_type == "vacuum":
@@ -306,7 +306,7 @@ func perform_interaction(_actor, _mode: int) -> String:
         return "УЖЕ ТИХО"
     armed = false
     active = false
-    _rearm_left = randf_range(rearm_delay_min, rearm_delay_max)
+    _rearm_left = randf_range(rearm_delay_min, rearm_delay_max) * DifficultyManager.get_hazard_delay()
     _set_indicator(false)
     if hazard_type == "vacuum":
         _set_vacuum_blocking(false)

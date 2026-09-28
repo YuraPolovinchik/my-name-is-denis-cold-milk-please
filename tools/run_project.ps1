@@ -1,6 +1,7 @@
 param(
     [ValidateSet("Game", "Editor", "Tests")]
-    [string]$Mode = "Game"
+    [string]$Mode = "Game",
+    [switch]$HighQuality
 )
 
 $ErrorActionPreference = "Stop"
@@ -97,7 +98,9 @@ try {
                 exit 2
             }
             Write-Host "Project check passed. Starting the game..." -ForegroundColor Green
-            $GameResult = Invoke-NativeCaptured $EditorExe @("--language", "en", "--path", ".")
+            $GameArguments = @("--language", "en", "--path", ".")
+            if ($HighQuality) { $GameArguments += @("--rendering-method", "forward_plus") }
+            $GameResult = Invoke-NativeCaptured $EditorExe $GameArguments
             Write-NativeOutput $GameResult.Output
             $Code = $GameResult.ExitCode
         }

@@ -21,6 +21,7 @@ var payments_received := 0
 var missed_payments := 0
 var missed_payment_streak := 0
 var cash_found := 0.0
+var static_cash_collected := 0
 var total_heard_noise := 0.0
 var prevented_noise := 0.0
 var rita_demands_received := 0
@@ -52,6 +53,7 @@ var _finish_guard = false
 var _economy_emit_timer := 0.0
 var last_finished_result: Dictionary = {}
 
+const STATIC_CASH_STASHES := 8
 const LEADERBOARD_PATH := "user://coffee_leaderboard.json"
 const LEADERBOARD_LIMIT := 50
 
@@ -75,11 +77,13 @@ func reset_run() -> void:
     rita_awake = false
     camera_warning = false
     money_balance = 750.0
+    living_cost_rate = 2.5 * DifficultyManager.get_money_rate()
     payment_opportunities = 0
     payments_received = 0
     missed_payments = 0
     missed_payment_streak = 0
     cash_found = 0.0
+    static_cash_collected = 0
     total_heard_noise = 0.0
     prevented_noise = 0.0
     rita_demands_received = 0
@@ -125,10 +129,12 @@ func miss_payment() -> float:
     economy_updated.emit(get_economy_state())
     return loss
 
-func collect_cash(amount: float) -> void:
+func collect_cash(amount: float, is_static_stash: bool = false) -> void:
     if amount <= 0.0:
         return
     cash_found += amount
+    if is_static_stash:
+        static_cash_collected += 1
     money_balance += amount
     economy_updated.emit(get_economy_state())
 
@@ -242,6 +248,7 @@ func record_noise(raw_strength: float, heard_strength: float, _category: StringN
 
 func record_drop() -> void:
     dropped_items += 1
+    AchievementSystem.on_item_dropped()
 
 func record_payment_altar_bow() -> void:
     payment_altar_bows += 1
@@ -270,6 +277,8 @@ func finish_run() -> Dictionary:
         "payments_received": payments_received,
         "missed_payments": missed_payments,
         "cash_found": cash_found,
+        "cash_stashes_collected": static_cash_collected,
+        "cash_stashes_total": STATIC_CASH_STASHES,
         "total_heard_noise": total_heard_noise,
         "prevented_noise": prevented_noise,
         "rita_demands_received": rita_demands_received,
@@ -303,6 +312,7 @@ func finish_run() -> Dictionary:
     last_finished_result = result.duplicate(true)
     # Проверка достижений
     _check_achievements(result)
+    AchievementSystem.evaluate_run_result(result)
     run_finished.emit(result)
     return result
 

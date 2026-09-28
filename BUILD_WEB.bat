@@ -23,8 +23,7 @@ if not exist "%APPDATA%\Godot\export_templates\4.4.1.stable\web_nothreads_releas
   popd & exit /b 4
 )
 
-if exist "dist\web" rmdir /s /q "dist\web"
-mkdir "dist\web" || (popd & exit /b 5)
+if not exist "dist\web" mkdir "dist\web" || (popd & exit /b 5)
 
 "%GODOT%" --headless --path . --export-release "Web" "dist/web/index.html"
 if errorlevel 1 (popd & exit /b 6)
@@ -32,7 +31,8 @@ if errorlevel 1 (popd & exit /b 6)
 if not exist "dist\web\index.html" (echo ERROR: index.html is missing.& popd & exit /b 7)
 dir /b "dist\web\*.wasm" >nul 2>&1 || (echo ERROR: WASM is missing.& popd & exit /b 8)
 dir /b "dist\web\*.pck" >nul 2>&1 || (echo ERROR: PCK is missing.& popd & exit /b 9)
-powershell -NoProfile -Command "New-Item -ItemType File -Force -Path 'dist\web\.nojekyll' | Out-Null; $s=(Get-ChildItem 'dist\web' -File -Recurse | Measure-Object Length -Sum).Sum; Write-Host ('WEB_BUILD_OK: {0:N2} MB' -f ($s / 1MB))"
+powershell -NoProfile -Command "if ((Get-Item 'dist/web/index.pck').Length -ge 100000000) { Write-Error 'Web pack exceeds the GitHub 100 MB file limit'; exit 10 }; New-Item -ItemType File -Force -Path 'dist\web\.nojekyll' | Out-Null; $s=(Get-ChildItem 'dist\web' -File -Recurse | Measure-Object Length -Sum).Sum; Write-Host ('WEB_BUILD_OK: {0:N2} MB' -f ($s / 1MB))"
 
+if errorlevel 1 (popd & exit /b 10)
 popd
 exit /b 0

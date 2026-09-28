@@ -13,7 +13,7 @@ func perform_interaction(_actor, _mode: int) -> String:
     if collected:
         return "ЗДЕСЬ БОЛЬШЕ НЕТ ДЕНЕГ"
     collected = true
-    RunStats.collect_cash(amount)
+    RunStats.collect_cash(amount, has_meta("static_cash"))
     RunStats.denis_spoke.emit("Это не воровство.")
     AudioManager.play_ui(&"success", -12.0)
     visible = false
